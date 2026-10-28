@@ -51,7 +51,7 @@ export default function Estimates() {
             <Row label={`${tin} Tin Cats × ${a?.tinCatServiceMinutes ?? 1} min`} value={formatMinutes(tinMin)} />
             <Row label={`${st} stations × ${a?.baitStationServiceMinutes ?? 2} min`} value={formatMinutes(stMin)} />
             <Row strong label="Device-service labor" value={formatMinutes(tinMin + stMin)} />
-            <Row strong label={`At ${formatMoney(r)}/hr`} value={<span className="font-display text-[22px] font-bold"><Rolling value={laborCents(tinMin + stMin, r)} format={(c) => formatMoney(c)} /></span>} sub={`${tinMin + stMin} min ÷ 60 × ${formatMoney(r)}`} />
+            <Row strong label={`At ${formatMoney(r)}/hr`} value={<span className="num font-display text-[22px] font-bold"><Rolling value={laborCents(tinMin + stMin, r)} format={(c) => formatMoney(c)} /></span>} sub={`${tinMin + stMin} min ÷ 60 × ${formatMoney(r)}`} />
           </div>
           <p className="text-[12px] text-ink3">Equipment handling only. Walking, inspection, treatment, setup and documentation are estimated in the full estimator.</p>
           <button className="btn-primary w-full sm:w-auto" disabled={busy} onClick={openFull}>

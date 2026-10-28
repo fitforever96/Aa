@@ -25,6 +25,7 @@ export function openWithTransition(push: (href: string) => void, href: string, f
   if (!doc.startViewTransition || reducedMotion() || !from) return push(href);
   const id = new URLSearchParams(href.split("?")[1] ?? "").get("id");
   from.style.viewTransitionName = "open-card";
+  document.documentElement.dataset.vt = "1";
   const t = doc.startViewTransition(
     () =>
       new Promise<void>((resolve) => {
@@ -44,5 +45,8 @@ export function openWithTransition(push: (href: string) => void, href: string, f
         setTimeout(check, 16);
       }),
   );
-  t.finished.finally(() => document.querySelectorAll<HTMLElement>("[data-vt-target]").forEach((el) => (el.style.viewTransitionName = "")));
+  t.finished.finally(() => {
+    document.querySelectorAll<HTMLElement>("[data-vt-target]").forEach((el) => (el.style.viewTransitionName = ""));
+    delete document.documentElement.dataset.vt;
+  });
 }

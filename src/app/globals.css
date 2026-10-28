@@ -230,12 +230,15 @@ textarea {
   100% { opacity: 0; transform: scale(1.08); filter: blur(6px); }
 }
 @keyframes app-enter {
-  0% { opacity: 0; transform: scale(0.97); }
-  100% { opacity: 1; transform: none; }
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 /* Page and step transitions */
 .page-enter {
+  animation: page-fade 0.28s ease both;
+}
+.page-enter main {
   animation: page-enter 0.42s var(--ease-out) both;
 }
 @keyframes page-enter {
@@ -246,6 +249,12 @@ textarea {
 .step-prev { animation: step-prev 0.38s var(--ease-out) both; }
 @keyframes step-next { 0% { opacity: 0; transform: translateX(24px); } 100% { opacity: 1; transform: none; } }
 @keyframes step-prev { 0% { opacity: 0; transform: translateX(-24px); } 100% { opacity: 1; transform: none; } }
+
+main,
+.stagger > *,
+.seg-thumb {
+  backface-visibility: hidden;
+}
 
 /* Staggered lists: children rise in one after another */
 .stagger > * {
@@ -318,7 +327,7 @@ textarea {
 a.card,
 button.card {
   transition:
-    transform 0.42s var(--ease-spring),
+    transform 0.34s cubic-bezier(0.3, 1.25, 0.5, 1),
     background-color 0.2s ease,
     color 0.2s ease,
     border-color 0.2s ease,
@@ -330,7 +339,7 @@ button.card {
 .btn-secondary:active,
 .btn-ghost:active,
 .chip:active {
-  transform: scale(0.95);
+  transform: scale(0.96);
   transition-duration: 0.08s;
 }
 a.card:active,
@@ -346,17 +355,26 @@ button.card:active {
   100% { transform: none; }
 }
 .row-press {
-  transition: background-color 0.2s ease, transform 0.35s var(--ease-spring);
+  transition: background-color 0.25s ease;
 }
 .row-press:active {
-  background-color: rgb(var(--surface2) / 0.9);
-  transform: scale(0.985);
-  transition-duration: 0.08s;
+  background-color: rgb(var(--surface-2) / 0.9);
+  transition-duration: 0.05s;
 }
 
 /* Direction-aware page transitions: deeper slides in from the right, back from the left. */
-.page-forward { animation: page-forward 0.42s var(--ease-out) both; }
-.page-back { animation: page-back 0.42s var(--ease-out) both; }
+/* The page fades; only its content area slides, so sticky headers and floating bars never shift. */
+.page-forward,
+.page-back { animation: page-fade 0.3s ease both; }
+.page-forward main { animation: page-forward 0.42s var(--ease-out) both; }
+.page-back main { animation: page-back 0.42s var(--ease-out) both; }
+@keyframes page-fade { 0% { opacity: 0; } 100% { opacity: 1; } }
+/* While a card grows into its page, that is the only motion. */
+html[data-vt] .page-forward,
+html[data-vt] .page-back,
+html[data-vt] .page-forward main,
+html[data-vt] .page-back main,
+html[data-vt] .page-enter { animation: none; }
 @keyframes page-forward { 0% { opacity: 0; transform: translateX(32px); } 100% { opacity: 1; transform: none; } }
 @keyframes page-back { 0% { opacity: 0; transform: translateX(-32px); } 100% { opacity: 1; transform: none; } }
 
@@ -399,3 +417,41 @@ button.card:active {
   .collapse-grid { transition: none; }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
+
+/* ---------- Build sequence ---------- */
+.build-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 140px;
+  top: -140px;
+  background: linear-gradient(180deg, transparent, rgba(228, 0, 43, 0.08) 70%, rgba(255, 51, 85, 0.35) 98%, transparent);
+  animation: build-scan 3.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  will-change: transform;
+}
+@keyframes build-scan { 0% { transform: translateY(0); } 100% { transform: translateY(calc(100vh + 140px)); } }
+.build-fade { animation: build-fade 0.7s var(--ease-out) both; }
+@keyframes build-fade { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: none; } }
+.build-chip { animation: build-chip 0.6s var(--ease-spring) both; }
+@keyframes build-chip { 0% { opacity: 0; transform: translateY(14px) scale(0.85); } 100% { opacity: 1; transform: none; } }
+.build-spin { animation: build-spin 9s linear infinite; }
+.build-spin-rev { animation: build-spin 2.6s linear infinite reverse; }
+.build-orbit { animation: build-spin 3.4s cubic-bezier(0.5, 0.1, 0.5, 0.9) infinite; }
+@keyframes build-spin { to { transform: rotate(360deg); } }
+.build-settle { animation-play-state: paused; opacity: 0.4; transition: opacity 0.5s ease; }
+.build-core {
+  box-shadow: 0 0 0 0 rgba(228, 0, 43, 0.5), 0 0 40px rgba(228, 0, 43, 0.55);
+  animation: build-core 1.8s ease-in-out infinite;
+}
+@keyframes build-core {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(228, 0, 43, 0.45), 0 0 34px rgba(228, 0, 43, 0.45); }
+  50% { transform: scale(1.05); box-shadow: 0 0 0 14px rgba(228, 0, 43, 0), 0 0 54px rgba(228, 0, 43, 0.7); }
+}
+.build-core-done { animation: build-core-done 0.6s var(--ease-spring) both; box-shadow: 0 0 50px rgba(48, 209, 88, 0.55); }
+@keyframes build-core-done { 0% { transform: scale(0.85); } 100% { transform: scale(1); } }
+.build-swap { animation: build-swap 0.45s var(--ease-out) both; }
+@keyframes build-swap { 0% { opacity: 0; transform: translateY(10px); filter: blur(4px); } 100% { opacity: 1; transform: none; filter: blur(0); } }
+.build-ping { animation: build-ping 1.4s cubic-bezier(0, 0, 0.2, 1) infinite; }
+@keyframes build-ping { 75%, 100% { transform: scale(2.4); opacity: 0; } }
+.build-ping-dot { animation: build-dot 1.1s ease-in-out infinite; }
+@keyframes build-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.7); } }

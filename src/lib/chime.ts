@@ -193,3 +193,137 @@ export function playChime(): Promise<boolean> {
     () => false,
   );
 }
+
+// ───────────────────────── Build sounds ─────────────────────────
+
+/** "Power up" for starting a build: a rising filtered sweep into a soft open fifth. About 1.6 s. */
+function composeBuildStart(ctx: Ctx) {
+  const t = 0.03;
+  const master = ctx.createGain();
+  master.gain.value = 0.5;
+  master.connect(ctx.destination);
+  const verb = reverb(ctx, 1.6);
+  const wet = ctx.createGain();
+  wet.gain.value = 0.3;
+  verb.connect(wet).connect(master);
+  const bus = ctx.createGain();
+  bus.connect(master);
+  bus.connect(verb);
+  // Rising tone glide.
+  const o = ctx.createOscillator();
+  o.type = "sine";
+  o.frequency.setValueAtTime(hz(50), t);
+  o.frequency.exponentialRampToValueAtTime(hz(74), t + 0.7);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(0, t);
+  og.gain.linearRampToValueAtTime(0.12, t + 0.25);
+  og.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+  o.connect(og).connect(bus);
+  o.start(t);
+  o.stop(t + 1.2);
+  // Filtered noise "whoosh".
+  const len = Math.floor(ctx.sampleRate * 0.9);
+  const nb = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = nb.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const n = ctx.createBufferSource();
+  n.buffer = nb;
+  const bp = ctx.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.Q.value = 2.5;
+  bp.frequency.setValueAtTime(300, t);
+  bp.frequency.exponentialRampToValueAtTime(5000, t + 0.75);
+  const ng = ctx.createGain();
+  ng.gain.setValueAtTime(0, t);
+  ng.gain.linearRampToValueAtTime(0.09, t + 0.45);
+  ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+  n.connect(bp).connect(ng).connect(bus);
+  n.start(t);
+  // Soft arrival: D5 + A5.
+  for (const m of [74, 81]) bell(ctx, bus, m, t + 0.72, 0.08, 1.0);
+}
+
+/** "Complete": a quick bright rising triad. About 1.4 s. */
+function composeBuildDone(ctx: Ctx) {
+  const t = 0.03;
+  const master = ctx.createGain();
+  master.gain.value = 0.55;
+  master.connect(ctx.destination);
+  const verb = reverb(ctx, 1.8);
+  const wet = ctx.createGain();
+  wet.gain.value = 0.32;
+  verb.connect(wet).connect(master);
+  const bus = ctx.createGain();
+  bus.connect(master);
+  bus.connect(verb);
+  [74, 78, 81, 86].forEach((m, i) => bell(ctx, bus, m, t + i * 0.075, 0.12, 1.2));
+}
+
+const clips: Record<string, { el: HTMLAudioElement | null; p: Promise<HTMLAudioElement | null> | null }> = {};
+
+function prepareClip(name: string, composeFn: (ctx: Ctx) => void, seconds: number): Promise<HTMLAudioElement | null> {
+  const c = (clips[name] ??= { el: null, p: null });
+  if (c.el) return Promise.resolve(c.el);
+  if (c.p) return c.p;
+  const OAC = typeof window !== "undefined" ? window.OfflineAudioContext ?? (window as unknown as { webkitOfflineAudioContext?: typeof OfflineAudioContext }).webkitOfflineAudioContext : undefined;
+  if (!OAC) return Promise.resolve(null);
+  c.p = (async () => {
+    try {
+      const off = new OAC(2, Math.ceil(SR * seconds), SR);
+      composeFn(off);
+      const el = new Audio(URL.createObjectURL(encodeWav(await off.startRendering())));
+      el.preload = "auto";
+      el.setAttribute("playsinline", "");
+      c.el = el;
+      return el;
+    } catch {
+      c.p = null;
+      return null;
+    }
+  })();
+  return c.p;
+}
+
+/** Render the build sounds ahead of time so the Build tap can play instantly. */
+export function prepareBuildSounds() {
+  void prepareClip("start", composeBuildStart, 1.8);
+  void prepareClip("done", composeBuildDone, 1.6);
+}
+
+/**
+ * Call inside the Build tap: plays the power-up, and quietly unlocks the "complete" sound
+ * so iPhone lets it play later when the build finishes (outside the tap).
+ */
+export function playBuildStart() {
+  if (!introSoundEnabled()) return;
+  try {
+    const session = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
+    if (session) session.type = "playback";
+  } catch {}
+  const start = clips.start?.el;
+  if (start) {
+    start.currentTime = 0;
+    void start.play().catch(() => {});
+  }
+  const done = clips.done?.el;
+  if (done) {
+    done.muted = true;
+    void done
+      .play()
+      .then(() => {
+        done.pause();
+        done.currentTime = 0;
+        done.muted = false;
+      })
+      .catch(() => (done.muted = false));
+  }
+}
+
+export function playBuildDone() {
+  if (!introSoundEnabled()) return;
+  const done = clips.done?.el;
+  if (done) {
+    done.currentTime = 0;
+    void done.play().catch(() => {});
+  }
+}

@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowRight, Check, FileText, PencilLine, Sparkles } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bug, CalendarClock, Check, DollarSign, FileText, MapPin, PencilLine, Sparkles, Store } from "lucide-react";
+import { BuildSequence, type BuildChip } from "@/components/BuildSequence";
+import { parseBrief } from "@/lib/quick/brief";
+import { playBuildDone, playBuildStart, prepareBuildSounds } from "@/lib/chime";
+import { SERVICE_LABELS } from "@/lib/engine/assumptions";
 import { Badge, Callout, Card, Page, PageHeader, SectionTitle, Spinner } from "@/components/ui";
 import { VoiceInput } from "@/components/VoiceInput";
 import { LengthPicker } from "@/components/LengthPicker";
@@ -44,25 +48,55 @@ export default function QuickBuild() {
     if (settings) void db().settings.put({ ...settings, defaults: { ...settings.defaults, docLength: v } });
   };
 
+  const [chips, setChips] = useState<BuildChip[] | null>(null);
+  const [pending, setPending] = useState<QuickResult | null>(null);
+  useEffect(() => prepareBuildSounds(), []);
+
   const build = async () => {
+    // Sound must start inside the tap for iPhone to allow it.
+    playBuildStart();
     setError(null);
     setResult(null);
+    setPending(null);
+    setChips(briefChips(text));
+    // Each step stays on screen long enough to read, even when the build itself is instant.
+    let chain = Promise.resolve();
+    let last = 0;
+    const paced = (st: QuickStep) => {
+      chain = chain.then(async () => {
+        const wait = Math.max(0, 650 - (performance.now() - last));
+        if (last) await new Promise((r) => setTimeout(r, wait));
+        last = performance.now();
+        setStep(st);
+      });
+    };
     try {
-      setResult(await quickBuild(text, useAI, setStep, length));
+      const r = await quickBuild(text, useAI, paced, length);
+      await chain;
+      await new Promise((res) => setTimeout(res, Math.max(0, 650 - (performance.now() - last))));
+      setPending(r);
+      playBuildDone();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't build the proposal.");
-    } finally {
+      setChips(null);
       setStep(null);
     }
   };
 
+  const finish = useCallback(() => {
+    setResult(pending);
+    setPending(null);
+    setChips(null);
+    setStep(null);
+  }, [pending]);
+
   if (result) return <Done r={result} onOpen={(s) => router.push(`/proposal?id=${result.proposal.id}&step=${s}`)} onAgain={() => (setResult(null), setText(""))} />;
 
   const steps = STEPS.filter((s) => useAI || !s.ai);
-  const at = step ? steps.findIndex((s) => s.key === step) : -1;
 
   return (
     <>
+      {chips && <BuildSequence mode={useAI ? "ai" : "offline"} steps={steps} current={step} done={!!pending} chips={chips} onFinished={finish} />}
       <PageHeader title="Build a Proposal" eyebrow="Quick build" back="/" />
       <Page>
         <Card>
@@ -74,22 +108,6 @@ export default function QuickBuild() {
           <button className="btn-primary cta-sheen mt-3 w-full !py-3.5 text-[16px]" disabled={text.trim().length < 6 || !!step} onClick={build}>
             {step ? <Spinner /> : <Sparkles size={18} />} {step ? "Building…" : "Build my proposal"}
           </button>
-          {step && (
-            <div className="mt-4 h-1 overflow-hidden rounded-full bg-surface2">
-              <div className="progress-shimmer h-full rounded-full transition-[width] duration-700 ease-out" style={{ width: `${Math.max(12, ((at + 1) / steps.length) * 100)}%` }} />
-            </div>
-          )}
-          {step && (
-            <ol className="stagger mt-4 space-y-2">
-              {steps.map((s, i) => (
-                <li key={s.key} className={`flex items-center gap-2.5 text-[14px] ${i > at ? "text-ink3" : ""}`}>
-                  <span className="flex h-5 w-5 items-center justify-center">{i < at ? <Check size={16} className="text-ok" /> : i === at ? <Spinner size={14} /> : <span className="h-1.5 w-1.5 rounded-full bg-ink3/50" />}</span>
-                  {s.label}
-                </li>
-              ))}
-              {useAI && <li className="pl-7 text-[12px] text-ink3">This takes 1 to 3 minutes. Keep the app open.</li>}
-            </ol>
-          )}
           {error && <Callout tone="red" className="mt-3">{error}</Callout>}
         </Card>
 
@@ -246,4 +264,16 @@ function useCountUp(target: number, ms = 900): number {
     return () => cancelAnimationFrame(raf);
   }, [target, ms]);
   return v;
+}
+
+/** What was read from the note, shown as chips flying into the build screen. */
+function briefChips(text: string): BuildChip[] {
+  const b = parseBrief(text);
+  const out: BuildChip[] = [];
+  if (b.customerName) out.push({ icon: <Store size={13} />, text: b.customerName });
+  if (b.address) out.push({ icon: <MapPin size={13} />, text: [b.address.line1, b.address.city].filter(Boolean).join(", ") });
+  if (b.pestsBasis === "stated") out.push({ icon: <Bug size={13} />, text: b.services.slice(0, 2).map((x) => SERVICE_LABELS[x]).join(" + ") });
+  if (b.priceCents != null) out.push({ icon: <DollarSign size={13} />, text: `${formatMoney(b.priceCents)}${b.priceBasis === "per_month" ? " / month" : b.priceBasis === "one_time" ? " one time" : " / visit"}` });
+  if (b.frequencyBasis === "stated") out.push({ icon: <CalendarClock size={13} />, text: frequencyLabel(b.frequency) });
+  return out;
 }
