@@ -23,10 +23,29 @@ export interface PdfQAResult {
   pages: { index: number; chars: number; images: number; minX: number; maxX: number; minY: number; maxY: number; issues: string[] }[];
 }
 
-const SECTION_TEXT = (p: Proposal) =>
-  p.document.sections
+/** Every block of text in a story, so Claude-written story copy goes through the same writing and legal checks. */
+export function storyText(story: NonNullable<Proposal["story"]>): string {
+  const out: string[] = [story.hero.title, story.hero.subtitle, story.hero.tagline];
+  for (const b of story.blocks) {
+    const { priority: _p, kind: _k, ...rest } = b as Record<string, unknown>;
+    void _p;
+    void _k;
+    JSON.stringify(rest, (k, v) => {
+      if (typeof v === "string" && !["program", "part", "phase", "specialty", "line"].includes(k)) out.push(v);
+      return v;
+    });
+  }
+  return out.filter(Boolean).join("\n");
+}
+
+const SECTION_TEXT = (p: Proposal) => [
+  ...p.document.sections
     .filter((s) => s.enabled)
-    .map((s) => ({ s, text: [s.eyebrow, s.headline, s.headlineAccent, s.body, s.callout, ...s.items.flatMap((i) => [i.title, i.body])].join("\n") }));
+    .map((s) => ({ s, text: [s.eyebrow, s.headline, s.headlineAccent, s.body, s.callout, ...s.items.flatMap((i) => [i.title, i.body])].join("\n") })),
+  ...(p.story && (p.document.options.layout ?? "story") === "story"
+    ? [{ s: { id: "story", type: "custom", eyebrow: "Story", headline: "Proposal story", headlineAccent: "", body: "", items: [], callout: "", enabled: true, contractual: false, source: p.story.source === "ai" ? "ai" : "template", sourceRefs: [], updatedAt: p.story.updatedAt } as Proposal["document"]["sections"][number], text: storyText(p.story) }]
+    : []),
+];
 
 /**
  * Automated quality control. Every check listed here is actually executed against

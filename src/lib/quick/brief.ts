@@ -30,6 +30,8 @@ export interface QuickPlan {
   buildings: number;
   floors: number;
   apartments: number | null;
+  /** Stated apartments per visit (multifamily rotation); otherwise planned from the unit count. */
+  apartmentsPerVisit: number | null;
   services: ServiceCategory[];
   pestsBasis: Basis;
   activityAreas: string[];
@@ -121,7 +123,12 @@ export const isRodentProgram = (s: ServiceCategory[]) => s.some((x) => x === "ro
 /** Rules-of-thumb device layout. Labeled as an estimate; Anthony adjusts after the site walk. */
 export function estimateDevices(model: PropertyModel, squareFeet: number | null, buildings: number, floors: number): { tinCats: number; exteriorStations: number; reason: string } {
   const sq = squareFeet ?? TYPICAL_SQFT[model] ?? 0;
-  if (model === "multifamily") return { tinCats: 12, exteriorStations: 8 * Math.max(1, buildings), reason: "Common-area Tin Cats and a perimeter station layout per building; adjust after the site walk." };
+  if (model === "multifamily")
+    return {
+      tinCats: Math.max(12, 3 * Math.max(1, floors) * Math.max(1, buildings)),
+      exteriorStations: Math.max(8, (floors >= 6 ? 12 : 8) * Math.max(1, buildings)),
+      reason: "Interior devices in common areas, utility rooms and trash rooms on each floor, plus a perimeter station layout per building; adjust after the site walk.",
+    };
   const b = Math.max(1, buildings);
   const footprint = sq / b / Math.max(1, floors);
   const perimeter = 4 * Math.sqrt(footprint);
@@ -196,6 +203,7 @@ export function parseBrief(brief: string): QuickPlan {
     buildings,
     floors,
     apartments: intake.apartments,
+    apartmentsPerVisit: intake.apartmentsPerVisit,
     services,
     pestsBasis: intake.services.length ? "stated" : "estimate",
     activityAreas: intake.activityAreas,
@@ -264,7 +272,8 @@ export function buildQuickProposal(plan: QuickPlan, deps: BuildDeps): { proposal
   prog.frequency = plan.frequency;
   prog.chargeType = plan.frequency.kind === "one_time" ? "one_time" : "recurring";
   prog.billing.method = plan.frequency.kind === "one_time" ? "one_time" : "per_visit";
-  if (plan.model === "multifamily" && plan.apartments) prog.apartmentsPerVisit = Math.max(1, Math.min(plan.apartments, Math.ceil(plan.apartments / 12)));
+  if (plan.apartmentsPerVisit) prog.apartmentsPerVisit = plan.apartmentsPerVisit;
+  else if (plan.model === "multifamily" && plan.apartments) prog.apartmentsPerVisit = Math.max(1, Math.min(plan.apartments, Math.ceil(plan.apartments / 12)));
   let unpricedDevices = false;
   const put = (id: string, qty: number) => {
     if (qty <= 0) return;

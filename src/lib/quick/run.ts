@@ -3,7 +3,7 @@
 import type { DocLength, Proposal, Settings } from "../types";
 import { activeAssumptionVersion, db, getSettings, saveProposal, snapshotVersion } from "../db";
 import { aiFetch } from "../client";
-import { aiRewrite } from "../aiActions";
+import { aiRewrite, aiStory } from "../aiActions";
 import { runQC, type QCCheck } from "../qc";
 import { buildQuickProposal, mergeDraft, parseBrief, type AIDraft, type QuickPlan } from "./brief";
 
@@ -56,8 +56,9 @@ export async function quickBuild(brief: string, useAI: boolean, onStep: (s: Quic
   if (useAI && plan.mode === "ai") {
     onStep("write");
     try {
-      const r = await aiRewrite(p, settings, { instruction: WRITE_INSTRUCTION + LENGTH_NOTE[length], target: "all", allowContractual: false });
-      p = r.proposal;
+      // The portrait story is what the customer sees; the classic layout uses rewritten sections.
+      if ((p.document.options.layout ?? "story") === "story") p = await aiStory(p, settings);
+      else p = (await aiRewrite(p, settings, { instruction: WRITE_INSTRUCTION + LENGTH_NOTE[length], target: "all", allowContractual: false })).proposal;
       await saveProposal(p);
     } catch (e) {
       warnings.push(`Claude couldn't finish the writing (${e instanceof Error ? e.message : "error"}). The proposal uses the built-in writer; you can rewrite it from the Document step.`);

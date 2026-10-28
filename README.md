@@ -16,6 +16,7 @@ A mobile-first progressive web app (PWA) for commercial pest-management proposal
 | **Writing** | An offline template writer produces customer-specific sections per proposal type. With AI configured, Claude rewrites the sections you select, using accepted research and passages retrieved from your knowledge library. Writing changes can never alter prices: this is enforced in code and covered by tests. |
 | **Assistant** | Natural-language commands parsed offline (or by AI). Pricing, scope, frequency, guarantee and exclusion changes wait for your explicit approval. Writing and design changes apply directly. |
 | **Voice** | Web Speech API dictation where the device exposes it. Otherwise the app says so and points you to iOS keyboard dictation. Dictation is parsed into structured intake (square footage, Tin Cats, stations, frequency, pests, activity areas). |
+| **Portrait proposal (default)** | Argument-driven, portrait letter pages modeled on Anthony's own proposals: red edge stripe, hero with dark stat bar, assessment, "why this response" callout, objectives, plan at a glance, scope cards with prices in the header, rotation capacity, separately priced items, responsibilities and exclusions side by side, red price strip. Content flows continuously so pages fill. With Claude connected it writes the story for the specific site; prices are attached by key from the pricing engine and any amount written in prose is removed; terms, guarantee wording and the price summary always come from approved text. Lengths drop optional blocks one at a time (then re-add any that still fit) to fill the page budget. |
 | **PDF** | Searchable vector PDF with embedded Roboto Condensed and Lato. Three covers: Executive Charcoal, Corporate White and Property Showcase. Repeating table headers, rows that never split, fixed headers and footers with page numbers, multi-property schedules, specialty tables, photos and floor plans. Separate **Internal Estimate** PDF. Preview rendered as page images, then iOS share sheet (Save to Files / Mail) or download. |
 | **QC** | About 30 executed checks across financial, operational, legal/technical and document groups, plus page-by-page **visual inspection of the rendered PDF**: clipped text, overlaps, blank or near-empty pages, smallest font, margin consistency. Checks that can't run are reported as *not run*. |
 | **Import** | PDF (pdf.js), DOCX (mammoth), TXT and JSON. Deterministic extraction with evidence and confidence; nothing is saved until you confirm it. AI extraction and AI OCR for scanned PDFs when configured. Six actions: redesign, improve, template, historical reference, **keep everything except the cover** (pdf-lib page merge), and comprehensive. |
@@ -46,7 +47,7 @@ To change the standard, update the `MASTER_MEMORY` environment variable and rede
 npm install          # also copies the PDF.js worker and PDF fonts into /public
 cp .env.example .env.local   # optional: add ANTHROPIC_API_KEY to enable AI
 npm run dev          # http://localhost:3000
-npm test             # 90 tests: calculations, guards, QC, persistence, import, PDF export + visual QA
+npm test             # 106 tests: calculations, guards, QC, persistence, import, PDF export + visual QA
 npm run build && npm start
 ```
 

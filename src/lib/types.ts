@@ -333,6 +333,39 @@ export interface SectionItem {
   body: string;
 }
 
+/** Price placeholder in a story block, resolved from the pricing engine at render time (text never carries amounts). */
+export type PriceRef = { program: number; part: "initial" | "recurring" | "equipment" } | { specialty: string } | { line: string; program: number; phase: "initial" | "recurring" };
+
+/** Importance of a story block: 1 = essential (scope, price, terms), 2 = supporting, 3 = optional depth. Shorter lengths drop 3, then 2. */
+export type StoryPriority = 1 | 2 | 3;
+
+export type StoryBlock = { priority: StoryPriority } & (
+  | { kind: "heading"; title: string; accent: string; lead: string }
+  | { kind: "label"; text: string }
+  | { kind: "paragraph"; text: string }
+  | { kind: "callout"; title: string; text: string; emphasis: string }
+  | { kind: "checks"; title: string; items: { title: string; body: string }[] }
+  | { kind: "darkColumns"; title: string; columns: { title: string; body: string }[] }
+  | { kind: "stats"; title: string; stats: { value: string; label: string }[] }
+  | { kind: "scope"; cards: { eyebrow: string; title: string; price: PriceRef | null; priceSuffix: string; bullets: string[] }[] }
+  | { kind: "bigNumber"; title: string; value: string; caption: string; text: string }
+  | { kind: "charge"; title: string; price: PriceRef; priceLabel: string; text: string }
+  | { kind: "note"; text: string }
+  | { kind: "steps"; title: string; items: { title: string; body: string }[] }
+  | { kind: "twoLists"; left: { title: string; items: string[] }; right: { title: string; items: string[] } }
+  | { kind: "priceStrip"; items: { label: string; price: PriceRef; caption: string }[] }
+  | { kind: "sources"; items: string[] }
+  | { kind: "schedules" }
+);
+
+/** Argument-driven proposal content (portrait "story" layout). */
+export interface Story {
+  hero: { eyebrow: string; title: string; subtitle: string; tagline: string; stats: { value: string; label: string }[] };
+  blocks: StoryBlock[];
+  source: "rules" | "ai";
+  updatedAt: ISODate;
+}
+
 /** Customer PDF length: same information at every length, condensed to fit. */
 export type DocLength = "one_page" | "two_page" | "short" | "full";
 
@@ -364,6 +397,8 @@ export interface ProposalDocument {
   options: {
     /** Page budget for the customer PDF. Absent means "full" (older proposals). */
     length?: DocLength;
+    /** "story" = portrait, argument-driven layout (default); "classic" = landscape section layout. */
+    layout?: "story" | "classic";
     showContractTotals: boolean;
     contractMonths: number;
     pageOrientation: "landscape" | "portrait";
@@ -437,6 +472,8 @@ export interface Proposal {
   internalNotes: string;
   /** Present for government/RFP proposals. */
   rfpRequirements?: RfpRequirement[];
+  /** Story content written by Claude; when absent the story is composed from the proposal's sections and data. */
+  story?: Story | null;
   templateUsed: string | null;
   importedFrom: { fileName: string; docId: ID | null; mode: ImportMode } | null;
   wizardStep: number;

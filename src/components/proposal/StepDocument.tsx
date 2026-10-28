@@ -17,6 +17,7 @@ import { uid, nowISO } from "@/lib/ids";
 import { imageFileToDataUrl } from "@/lib/images";
 import type { CoverStyle, ResearchFinding, SectionType } from "@/lib/types";
 import type { StepProps } from "./types";
+import { LayoutCard } from "./LayoutCard";
 
 const COVERS: { value: CoverStyle; label: string; desc: string }[] = [
   { value: "executive_charcoal", label: "Executive Charcoal", desc: "Graphite, red accents, dramatic type" },
@@ -155,9 +156,11 @@ export function StepDocument(props: StepProps) {
 
   return (
     <div className="space-y-5">
+      <LayoutCard p={p} update={update} replace={replace} />
       <div>
-        <SectionTitle>Cover design</SectionTitle>
-        <div className="grid grid-cols-3 gap-2.5">
+        <SectionTitle>{(p.document.options.layout ?? "story") === "classic" ? "Cover design" : "Document details"}</SectionTitle>
+        {(p.document.options.layout ?? "story") === "classic" && (
+        <div className="mb-3 grid grid-cols-3 gap-2.5">
           {COVERS.map((c) => (
             <button key={c.value} onClick={() => update((d) => void (d.document.coverStyle = c.value))} className={clsx("card p-2 text-left transition", p.document.coverStyle === c.value && "!border-red ring-2 ring-red/30")}>
               <CoverThumb style={c.value} image={coverImage} />
@@ -166,7 +169,8 @@ export function StepDocument(props: StepProps) {
             </button>
           ))}
         </div>
-        <Card className="mt-3 grid gap-3 sm:grid-cols-2">
+        )}
+        <Card className="grid gap-3 sm:grid-cols-2">
           <TextField label="Cover badge" value={p.document.coverBadge} onChange={(v) => update((d) => void (d.document.coverBadge = v))} placeholder={p.customer.name ? `Prepared for ${p.customer.name}` : "Exclusive proposal"} />
           <TextField label="Cover tagline" value={p.document.coverTagline} onChange={(v) => update((d) => void (d.document.coverTagline = v))} placeholder="A stronger standard of pest management…" />
           <div>

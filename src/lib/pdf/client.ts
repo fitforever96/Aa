@@ -19,6 +19,17 @@ async function renderer() {
 export async function generateCustomerPdf(p: Proposal, assets: Asset[]): Promise<Blob & { fit?: Fitted }> {
   const { r, doc } = await renderer();
   const React = await import("react");
+  if ((p.document.options.layout ?? "story") === "story") {
+    const [{ StoryDocument }, { buildStoryModel }] = await Promise.all([import("./StoryDocument"), import("../story/resolve")]);
+    const sm = buildStoryModel(p, assets.find((x) => x.id === p.document.coverImageAssetId)?.dataUrl ?? null);
+    const { fitStory } = await import("../story/fit");
+    const fit = await fitStory(sm, async (plan, squeeze) => {
+      const el = React.createElement(StoryDocument, { m: sm, plan, squeeze });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return new Uint8Array(await (await r.pdf(el as any).toBlob()).arrayBuffer());
+    });
+    return Object.assign(new Blob([fit.bytes as BlobPart], { type: "application/pdf" }), { fit });
+  }
   const m = buildPdfModel(p, assets);
   const fit = await renderToFit(m.length, async (level, variant) => {
     const el = React.createElement(doc.ProposalDocument, { m, level, variant });

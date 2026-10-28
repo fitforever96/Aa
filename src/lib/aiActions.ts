@@ -43,3 +43,13 @@ export function templateRegenerate(p: Proposal, ctx: WriterContext, target: "all
   }
   return { proposal: next, changed, skipped: [], notes: [], mode: "template" };
 }
+
+/** Claude writes the portrait story for this proposal; prices, terms and the summary are attached by code. */
+export async function aiStory(p: Proposal, settings: Settings | undefined, instruction?: string): Promise<Proposal> {
+  const { finalizeAIStory, priceKeys, storyFacts } = await import("./story/ai");
+  const sections = p.document.sections.filter((s) => s.enabled);
+  const out = await aiFetch<import("./ai/tasks/story").StoryOutput>("/api/ai/story", { facts: storyFacts(p, sections), priceKeys: priceKeys(p).map(({ key, label }) => ({ key, label })), length: p.document.options.length ?? "full", instruction }, settings);
+  const next = { ...p, story: finalizeAIStory(out, p, sections) };
+  await snapshotVersion(p, "Before Claude wrote the proposal story");
+  return next;
+}
