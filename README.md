@@ -47,7 +47,7 @@ To change the standard, update the `MASTER_MEMORY` environment variable and rede
 npm install          # also copies the PDF.js worker and PDF fonts into /public
 cp .env.example .env.local   # optional: add ANTHROPIC_API_KEY to enable AI
 npm run dev          # http://localhost:3000
-npm test             # 106 tests: calculations, guards, QC, persistence, import, PDF export + visual QA
+npm test             # 105 tests: calculations, guards, QC, persistence, import, PDF export + visual QA
 npm run build && npm start
 ```
 
