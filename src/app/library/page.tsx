@@ -13,6 +13,7 @@ import { downloadBlob, relTime, safeFileName } from "@/lib/client";
 import { priceProposal } from "@/lib/engine/pricing";
 import { formatMoney } from "@/lib/engine/money";
 import { useToast } from "@/components/shell/Toast";
+import { openWithTransition } from "@/lib/motion";
 import type { Proposal } from "@/lib/types";
 
 const FILTERS = [
@@ -66,13 +67,20 @@ function LibraryInner() {
       </PageHeader>
       <Page>
         {proposals && list.length === 0 && <EmptyState title="Nothing here" body={q ? "No proposals match your search." : "No proposals in this view."} action={<Link href="/new" className="btn-primary">New proposal</Link>} />}
-        <div className="card divide-hair overflow-hidden">
+        <div className="stagger card divide-hair overflow-hidden">
           {list.map((p) => {
             const r = priceProposal(p)[0];
             const price = r?.recurring?.finalCents ?? r?.initial.finalCents;
             return (
               <div key={p.id} className="flex items-center gap-2 pr-2">
-                <Link href={`/proposal?id=${p.id}`} className="min-w-0 flex-1 px-4 py-3.5 transition hover:bg-surface2/50">
+                <Link
+                  href={`/proposal?id=${p.id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openWithTransition(router.push, `/proposal?id=${p.id}`, e.currentTarget);
+                  }}
+                  className="row-press min-w-0 flex-1 px-4 py-3.5 hover:bg-surface2/50"
+                >
                   <div className="flex items-center gap-2">
                     <span className="truncate text-[15px] font-semibold">{p.customer.name || p.property.name || "Untitled"}</span>
                     <Badge tone={STATUS_TONE[p.status]}>{STATUS_LABEL[p.status]}</Badge>

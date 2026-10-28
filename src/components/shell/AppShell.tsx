@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { haptic } from "@/lib/motion";
 import { BookOpen, Calculator, FolderOpen, Home, Plus, Settings as Cog, WifiOff } from "lucide-react";
 import { ToastProvider } from "./Toast";
 import { useOnline, useSeeded, useSettings } from "@/lib/client";
@@ -19,6 +20,13 @@ const NAV = [
   { href: "/knowledge", label: "Knowledge", icon: BookOpen },
 ];
 
+/** How deep a screen sits: going deeper slides in from the right, going back from the left. */
+function depth(path: string) {
+  if (path === "/") return 0;
+  if (path.startsWith("/proposal")) return 2;
+  return 1;
+}
+
 function active(path: string, href: string) {
   if (href === "/") return path === "/";
   if (href === "/library") return path.startsWith("/library") || path.startsWith("/proposal") || path.startsWith("/import");
@@ -31,6 +39,30 @@ export function AppShell({ children }: { children: ReactNode }) {
   const settings = useSettings();
   const online = useOnline();
   const [entered, setEntered] = useState(false);
+  const prevPath = useRef(path);
+  const poppedBack = useRef(false);
+  const [dir, setDir] = useState<"forward" | "back" | "same">("same");
+
+  useEffect(() => {
+    const onPop = () => (poppedBack.current = true);
+    // A short vibration on primary actions where the device supports it (Android).
+    const onDown = (e: PointerEvent) => (e.target as HTMLElement | null)?.closest?.(".btn-primary") && haptic();
+    window.addEventListener("popstate", onPop);
+    window.addEventListener("pointerdown", onDown, { passive: true });
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      window.removeEventListener("pointerdown", onDown);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (prevPath.current === path) return;
+    const a = depth(prevPath.current);
+    const b = depth(path);
+    setDir(poppedBack.current || b < a ? "back" : b > a ? "forward" : "same");
+    poppedBack.current = false;
+    prevPath.current = path;
+  }, [path]);
   const onIntroExit = useCallback(() => setEntered(true), []);
 
   useEffect(() => {
@@ -92,7 +124,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         )}
         {ready ? (
-          <div key={path} className="page-enter">
+          <div key={path} className={dir === "forward" ? "page-forward" : dir === "back" ? "page-back" : "page-enter"}>
             {children}
           </div>
         ) : null}

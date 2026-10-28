@@ -6,6 +6,7 @@ import { ChevronUp, Lock } from "lucide-react";
 import { formatHours, formatMinutes, formatMoney, laborCents } from "@/lib/engine/money";
 import { COMPONENT_LABELS, type Component } from "@/lib/engine/estimator";
 import { Row } from "@/components/ui";
+import { Collapse, Rolling } from "@/components/motion";
 import type { ProgramPricingResult } from "@/lib/engine/pricing";
 import type { ServiceProgram } from "@/lib/types";
 
@@ -42,17 +43,23 @@ export function LiveEstimateBar({ r, program }: { r: ProgramPricingResult; progr
     <div className="fixed inset-x-0 z-30 lg:hidden" style={{ bottom: "calc(env(safe-area-inset-bottom) + 58px)" }}>
       <div className="mx-auto max-w-xl px-3">
         <div className={clsx("overflow-hidden rounded-2xl border hairline-strong bg-surface2/95 shadow-2xl backdrop-blur-xl transition-all")}>
-          {open && <div className="max-h-[52dvh] overflow-y-auto border-b hairline px-4 py-3">{<LiveEstimatePanel r={r} program={program} />}</div>}
+          <Collapse open={open}>
+            <div className="max-h-[52dvh] overflow-y-auto border-b hairline px-4 py-3">
+              <LiveEstimatePanel r={r} program={program} />
+            </div>
+          </Collapse>
           <button className="flex w-full items-center gap-3 px-4 py-2.5" onClick={() => setOpen(!open)} aria-expanded={open}>
             <div className="min-w-0 flex-1 text-left">
               <div className="text-[11px] font-medium uppercase tracking-wider text-ink3">{r.recurring ? (r.recurring.overrideCents != null ? "Your price / visit" : "Suggested / visit") : "One-time"}</div>
-              <div className="num font-display text-[22px] font-bold leading-tight">{formatMoney(price)}</div>
+              <div className="num font-display text-[22px] font-bold leading-tight">
+                <Rolling value={price} format={(c) => formatMoney(c)} />
+              </div>
             </div>
             <div className="text-right">
               <div className="num text-[14px] font-semibold">{formatHours(r.estimate.recurring.technicianMinutes || r.estimate.initial.technicianMinutes)}</div>
               <div className="text-[11px] text-ink3">technician time</div>
             </div>
-            <ChevronUp size={18} className={clsx("text-ink3 transition", !open && "rotate-180")} />
+            <ChevronUp size={18} className={clsx("chev text-ink3", !open && "chev-open")} />
           </button>
         </div>
       </div>

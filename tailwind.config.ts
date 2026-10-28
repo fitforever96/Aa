@@ -32,7 +32,7 @@ export default {
         sheet: { "0%": { transform: "translateY(100%)" }, "100%": { transform: "none" } },
         fade: { "0%": { opacity: "0" }, "100%": { opacity: "1" } },
       },
-      animation: { rise: "rise .28s cubic-bezier(.2,.8,.2,1) both", sheet: "sheet .32s cubic-bezier(.2,.8,.2,1) both", fade: "fade .2s ease both" },
+      animation: { rise: "rise .28s cubic-bezier(.2,.8,.2,1) both", sheet: "sheet .46s cubic-bezier(.32,1.08,.5,1) both", fade: "fade .25s ease both" },
     },
   },
   plugins: [],

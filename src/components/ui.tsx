@@ -15,7 +15,7 @@ export function Wordmark({ className, size = 22 }: { className?: string; size?: 
   );
 }
 
-export function PageHeader({ title, eyebrow, back, actions, children }: { title: ReactNode; eyebrow?: ReactNode; back?: string; actions?: ReactNode; children?: ReactNode }) {
+export function PageHeader({ title, eyebrow, back, actions, children, vtTarget }: { title: ReactNode; eyebrow?: ReactNode; back?: string; actions?: ReactNode; children?: ReactNode; vtTarget?: boolean }) {
   return (
     <header className="pt-safe sticky top-0 z-30 border-b hairline bg-bg/85 backdrop-blur-xl">
       <div className="px-safe mx-auto flex max-w-6xl items-center gap-3 py-3">
@@ -24,7 +24,7 @@ export function PageHeader({ title, eyebrow, back, actions, children }: { title:
             <ChevronLeft size={22} />
           </Link>
         )}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1" {...(vtTarget ? { "data-vt-target": "" } : {})}>
           {eyebrow && <div className="eyebrow mb-0.5 truncate">{eyebrow}</div>}
           <h1 className="truncate text-[19px] font-semibold tracking-tight">{title}</h1>
         </div>
@@ -209,9 +209,11 @@ export function Toggle({ checked, onChange, label, description, disabled }: { ch
 
 export function Segmented<T extends string>({ value, onChange, options, className, size = "md" }: { value: T; onChange: (v: T) => void; options: { value: T; label: ReactNode }[]; className?: string; size?: "sm" | "md" }) {
   return (
-    <div className={clsx("flex rounded-xl bg-surface2 p-1 border hairline", className)} role="tablist">
+    <div className={clsx("relative flex rounded-xl bg-surface2 p-1 border hairline", className)} role="tablist">
+      {/* The highlight slides to the selected option. */}
+      <span aria-hidden className="seg-thumb absolute bottom-1 left-1 top-1 rounded-lg bg-surface3 shadow-sm" style={{ width: `calc((100% - 8px) / ${options.length})`, transform: `translateX(${Math.max(0, options.findIndex((o) => o.value === value)) * 100}%)` }} />
       {options.map((o) => (
-        <button key={o.value} type="button" role="tab" aria-selected={value === o.value} onClick={() => onChange(o.value)} className={clsx("flex-1 whitespace-nowrap rounded-lg font-semibold transition", size === "sm" ? "px-2 py-1 text-[12px]" : "px-3 py-1.5 text-[13px]", value === o.value ? "bg-surface3 text-ink shadow-sm" : "text-ink3 hover:text-ink2")}>
+        <button key={o.value} type="button" role="tab" aria-selected={value === o.value} onClick={() => onChange(o.value)} className={clsx("relative flex-1 whitespace-nowrap rounded-lg font-semibold transition-colors", size === "sm" ? "px-2 py-1 text-[12px]" : "px-3 py-1.5 text-[13px]", value === o.value ? "text-ink" : "text-ink3 hover:text-ink2")}>
           {o.label}
         </button>
       ))}

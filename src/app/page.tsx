@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ArrowRight, Calculator, FileUp, Plus, Settings as Cog, Sparkles } from "lucide-react";
@@ -13,6 +14,7 @@ import { priceProposal } from "@/lib/engine/pricing";
 import { formatMoney } from "@/lib/engine/money";
 import { frequencyLabel } from "@/lib/engine/frequency";
 import { useToast } from "@/components/shell/Toast";
+import { openWithTransition } from "@/lib/motion";
 import { UnlockPrivateData } from "@/components/UnlockPrivateData";
 
 export default function Dashboard() {
@@ -22,8 +24,11 @@ export default function Dashboard() {
   const proposals = useLiveQuery(() => db().proposals.orderBy("updatedAt").reverse().toArray(), []);
   const historicalCount = useLiveQuery(() => db().historical.count(), []);
   const first = settings?.profile.name.split(" ")[0] ?? "";
-  const hour = new Date().getHours();
-  const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  // Time-based text is set after mount: the page is pre-rendered at build time.
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => setNow(new Date()), []);
+  const hour = now?.getHours() ?? 9;
+  const greet = !now ? "Welcome back" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   const counts = {
     draft: proposals?.filter((p) => p.status === "draft" || p.status === "in_review").length ?? 0,
@@ -53,7 +58,7 @@ export default function Dashboard() {
       </header>
       <Page className="!pt-2">
         <div className="animate-rise">
-          <div className="text-[13px] text-ink3">{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</div>
+          <div className="text-[13px] text-ink3">{now ? now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }) : "\u00a0"}</div>
           <h1 className="mt-0.5 font-display text-[34px] font-bold uppercase leading-[1.02] tracking-tight sm:text-[42px]">
             {greet}
             {first ? "," : ""} <span className="text-red">{first}</span>
@@ -112,7 +117,15 @@ export default function Dashboard() {
             const r = priceProposal(p)[0];
             const price = r?.recurring?.finalCents ?? r?.initial.finalCents;
             return (
-              <Link key={p.id} href={`/proposal?id=${p.id}`} className="flex items-center gap-3 px-4 py-3.5 transition hover:bg-surface2/60">
+              <Link
+                key={p.id}
+                href={`/proposal?id=${p.id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  openWithTransition(router.push, `/proposal?id=${p.id}`, e.currentTarget);
+                }}
+                className="row-press flex items-center gap-3 px-4 py-3.5 hover:bg-surface2/60"
+              >
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[15px] font-semibold">{p.customer.name || p.property.name || p.title}</div>
                   <div className="mt-0.5 truncate text-[12.5px] text-ink3">

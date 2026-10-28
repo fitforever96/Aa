@@ -20,8 +20,14 @@ function seenThisLaunch(): boolean {
  * then the screen lifts away into the app. Plays once per app launch. Tap to skip.
  */
 export function Intro({ ready, error, onExit }: { ready: boolean; error: string | null; onExit: () => void }) {
-  const [full] = useState(() => !seenThisLaunch());
-  const [minDone, setMinDone] = useState(!full);
+  // Decided after mount (session storage isn't available while the page is pre-rendered).
+  const [full, setFull] = useState<boolean | null>(null);
+  const [minDone, setMinDone] = useState(false);
+  useEffect(() => {
+    const f = !seenThisLaunch();
+    setFull(f);
+    if (!f) setMinDone(true);
+  }, []);
   const [phase, setPhase] = useState<"show" | "exit" | "gone">("show");
   const soundPending = useRef(false);
 

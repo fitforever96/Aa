@@ -30,6 +30,20 @@ export function Workspace() {
   const [programIdx, setProgramIdx] = useState(0);
   const [assistant, setAssistant] = useState(false);
   const dir = useRef<"next" | "prev">("next");
+  // A checkmark pops in briefly each time an edit finishes saving.
+  const [savedTick, setSavedTick] = useState(0);
+  const [justSaved, setJustSaved] = useState(false);
+  const lastSave = useRef(saveState);
+  useEffect(() => {
+    if (lastSave.current === "saving" && saveState === "saved") {
+      setSavedTick((n) => n + 1);
+      setJustSaved(true);
+      const t = setTimeout(() => setJustSaved(false), 1400);
+      lastSave.current = saveState;
+      return () => clearTimeout(t);
+    }
+    lastSave.current = saveState;
+  }, [saveState]);
 
   useEffect(() => {
     if (proposal && step < 0) setStep(proposal.wizardStep ?? 0);
@@ -71,12 +85,13 @@ export function Workspace() {
   return (
     <>
       <PageHeader
+        vtTarget
         back="/library"
         eyebrow={
           <span className="flex items-center gap-2">
             <Badge tone={STATUS_TONE[proposal.status]}>{STATUS_LABEL[proposal.status]}</Badge>
             <span className="flex items-center gap-1 normal-case tracking-normal">
-              {saveState === "saving" ? <Spinner size={11} /> : saveState === "error" ? <CloudOff size={12} className="text-red" /> : <Cloud size={12} />}
+              {saveState === "saving" ? <Spinner size={11} /> : saveState === "error" ? <CloudOff size={12} className="text-red" /> : justSaved ? <Check key={savedTick} size={12} className="save-pop text-ok" /> : <Cloud size={12} />}
               {saveState === "saving" ? "Saving" : saveState === "error" ? "Save failed" : "Saved on device"}
             </span>
           </span>

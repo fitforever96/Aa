@@ -306,3 +306,96 @@ textarea {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- Fluid interactions ---------- */
+
+/* Every tap visibly registers: press in, spring back. */
+.btn,
+.btn-primary,
+.btn-secondary,
+.btn-ghost,
+.chip,
+a.card,
+button.card {
+  transition:
+    transform 0.42s var(--ease-spring),
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+}
+.btn:active,
+.btn-primary:active,
+.btn-secondary:active,
+.btn-ghost:active,
+.chip:active {
+  transform: scale(0.95);
+  transition-duration: 0.08s;
+}
+a.card:active,
+button.card:active {
+  transform: scale(0.975);
+  transition-duration: 0.1s;
+}
+.chip-on {
+  animation: chip-on 0.35s var(--ease-spring);
+}
+@keyframes chip-on {
+  0% { transform: scale(0.9); }
+  100% { transform: none; }
+}
+.row-press {
+  transition: background-color 0.2s ease, transform 0.35s var(--ease-spring);
+}
+.row-press:active {
+  background-color: rgb(var(--surface2) / 0.9);
+  transform: scale(0.985);
+  transition-duration: 0.08s;
+}
+
+/* Direction-aware page transitions: deeper slides in from the right, back from the left. */
+.page-forward { animation: page-forward 0.42s var(--ease-out) both; }
+.page-back { animation: page-back 0.42s var(--ease-out) both; }
+@keyframes page-forward { 0% { opacity: 0; transform: translateX(32px); } 100% { opacity: 1; transform: none; } }
+@keyframes page-back { 0% { opacity: 0; transform: translateX(-32px); } 100% { opacity: 1; transform: none; } }
+
+/* Card grows into the opened page (View Transitions). */
+::view-transition-group(open-card) {
+  animation-duration: 0.42s;
+  animation-timing-function: cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.3s;
+}
+
+/* Expand / collapse to natural height. */
+.collapse-grid {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.34s var(--ease-out), opacity 0.25s ease;
+}
+.collapse-grid.collapse-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+/* Sliding selection highlight for segmented controls. */
+.seg-thumb {
+  transition: transform 0.38s var(--ease-spring), width 0.3s var(--ease-out);
+}
+
+/* Saved checkmark pops in. */
+.save-pop { animation: save-pop 0.5s var(--ease-spring) both; }
+@keyframes save-pop { 0% { transform: scale(0.3); opacity: 0; } 100% { transform: none; opacity: 1; } }
+
+/* Chevron rotation for expanders. */
+.chev { transition: transform 0.3s var(--ease-spring); }
+.chev-open { transform: rotate(180deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .collapse-grid { transition: none; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}

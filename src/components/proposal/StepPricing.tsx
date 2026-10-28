@@ -1,5 +1,6 @@
 "use client";
 
+import { Rolling } from "@/components/motion";
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { AlertTriangle, Lock, Plus, Trash2, Unlock } from "lucide-react";
@@ -22,7 +23,9 @@ function PricePanel({ title, point, override, onOverride, rate }: { title: strin
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="eyebrow">{title}</div>
-          <div className="num mt-1 font-display text-[34px] font-bold leading-none">{formatMoney(point.finalCents)}</div>
+          <div className="num mt-1 font-display text-[34px] font-bold leading-none">
+            <Rolling value={point.finalCents} format={(c) => formatMoney(c)} />
+          </div>
           <div className="mt-1 text-[12px] text-ink3">{override ? (locked ? "Your approved price (locked)" : "Your manual price (unlocked)") : "Calculated suggestion"}</div>
         </div>
         {locked ? <Badge tone="ok"><Lock size={11} /> Locked</Badge> : override ? <Badge tone="warn">Manual</Badge> : <Badge>Calculated</Badge>}

@@ -18,6 +18,7 @@ import { imageFileToDataUrl } from "@/lib/images";
 import type { CoverStyle, ResearchFinding, SectionType } from "@/lib/types";
 import type { StepProps } from "./types";
 import { LayoutCard } from "./LayoutCard";
+import { Collapse } from "@/components/motion";
 
 const COVERS: { value: CoverStyle; label: string; desc: string }[] = [
   { value: "executive_charcoal", label: "Executive Charcoal", desc: "Graphite, red accents, dramatic type" },
@@ -252,10 +253,10 @@ export function StepDocument(props: StepProps) {
                     >
                       <span className={clsx("absolute top-[3px] h-5 w-5 rounded-full bg-white transition-all", s.enabled ? "left-[21px]" : "left-[3px]")} />
                     </button>
-                    <ChevronDown size={16} className={clsx("shrink-0 text-ink3 transition", isOpen && "rotate-180")} />
+                    <ChevronDown size={16} className={clsx("chev shrink-0 text-ink3", isOpen && "chev-open")} />
                   </div>
-                  {isOpen && (
-                    <div className="animate-rise space-y-3 bg-surface2/40 px-3 pb-4 pt-1">
+                  <Collapse open={isOpen}>
+                    <div className="space-y-3 bg-surface2/40 px-3 pb-4 pt-1">
                       <div className="grid gap-3 sm:grid-cols-3">
                         <TextField label="Eyebrow" value={s.eyebrow} onChange={(v) => update((d) => void ((d.document.sections[i].eyebrow = v), (d.document.sections[i].source = "manual")))} />
                         <TextField label="Headline" value={s.headline} onChange={(v) => update((d) => void ((d.document.sections[i].headline = v), (d.document.sections[i].source = "manual")))} />
@@ -292,7 +293,7 @@ export function StepDocument(props: StepProps) {
                         </button>
                       </div>
                     </div>
-                  )}
+                  </Collapse>
                 </div>
               );
             })}
