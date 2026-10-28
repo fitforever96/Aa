@@ -8,6 +8,8 @@ import { InternalEstimateDocument } from "@/lib/pdf/InternalDocument";
 import { buildPdfModel } from "@/lib/pdf/model";
 import { buildInternalModel } from "@/lib/pdf/internalModel";
 import { analyzePdf, type PdfjsLike } from "@/lib/pdf/qa";
+import { renderToFit, countPdfPages } from "@/lib/pdf/fit";
+import { condenseSection, firstSentences } from "@/lib/pdf/condense";
 import { warehouse, portfolio, restaurant } from "../scripts/samples";
 
 async function textOf(buf: Uint8Array) {
@@ -72,4 +74,57 @@ describe("PDF text searchability", () => {
     expect(text).toMatch(/EXECUTIVE OVERVIEW/);
     expect(text).toMatch(/COMMERCIAL SERVICES/);
   }, 60000);
+});
+
+describe("PDF length options", () => {
+  const render = (p: ReturnType<typeof warehouse>) => {
+    const m = buildPdfModel(p, []);
+    return renderToFit(m.length, async (level, variant) => new Uint8Array(await renderToBuffer(<ProposalDocument m={m} level={level} variant={variant} />)));
+  };
+  const norm = (t: string) => t.replace(/\s+/g, " ");
+
+  for (const [length, pages] of [["one_page", 1], ["two_page", 2], ["short", 4]] as const) {
+    it(`${length}: fits ${pages} page(s), keeps every price and exclusion, passes layout inspection`, async () => {
+      const p = warehouse();
+      p.document.options.length = length;
+      const fit = await render(p);
+      expect(fit.pages).toBeLessThanOrEqual(pages);
+      expect(countPdfPages(fit.bytes)).toBe(fit.pages);
+      const text = norm(await textOf(fit.bytes));
+      for (const price of ["$325.00", "$950.00", "$2,092.00", "$375.00"]) expect(text).toContain(price);
+      // Exclusions are contractual: every one survives condensing, in full.
+      for (const e of p.document.sections.find((s) => s.type === "exclusions")!.body.split("\n")) expect(text).toContain(e.replace(/^- /, "").slice(0, 60));
+      expect(text).toMatch(/governed by the executed Orkin service agreement/i);
+      expect(text).not.toMatch(/\$210\.00\/hr|technician-min|yield/i);
+      const qa = await analyzePdf(fit.bytes, pdfjs as unknown as PdfjsLike);
+      const byId = Object.fromEntries(qa.checks.map((c) => [c.id, c]));
+      expect(byId.vis_clip.status, byId.vis_clip.detail).toBe("pass");
+      expect(byId.vis_overlap.status, byId.vis_overlap.detail).toBe("pass");
+      expect(byId.vis_font.status).toBe("pass");
+    }, 120000);
+  }
+
+  it("every section is represented at the shortest length", async () => {
+    const p = warehouse();
+    p.document.options.length = "one_page";
+    const text = norm(await textOf((await render(p)).bytes)).toUpperCase();
+    for (const s of p.document.sections.filter((x) => x.enabled && x.type !== "photos" && x.type !== "floor_plans")) expect(text).toContain((s.eyebrow || s.type.replace(/_/g, " ")).toUpperCase());
+  }, 120000);
+
+  it("reports honestly when a proposal can't fit (large property schedules)", async () => {
+    const p = portfolio();
+    p.document.options.length = "two_page";
+    const fit = await render(p);
+    expect(fit.fits).toBe(false);
+    expect(fit.pages).toBeGreaterThan(2);
+  }, 120000);
+});
+
+describe("condensing", () => {
+  it("keeps abbreviations intact and never drops contractual items", () => {
+    expect(firstSentences("Orkin's A.I.M.® process has three steps. Assess first.", 1)).toBe("Orkin's A.I.M.® process has three steps.");
+    const p = warehouse();
+    const ex = p.document.sections.find((s) => s.type === "exclusions")!;
+    for (const level of [1, 2, 3, 4]) expect(condenseSection(ex, level).items.length).toBe(ex.body.split("\n").length);
+  });
 });

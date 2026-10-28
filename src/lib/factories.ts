@@ -144,7 +144,7 @@ export function newProposal(settings: Settings, version: AssumptionVersion): Pro
       preparedBy: [{ name: p.name, title: p.title, phone: p.phone, email: p.email }],
       date: t.slice(0, 10),
       sections: [],
-      options: { showContractTotals: false, contractMonths: 12, pageOrientation: settings.defaults.pageOrientation, accentHex: "#E4002B", showCoverStats: true },
+      options: { length: settings.defaults.docLength ?? "full", showContractTotals: false, contractMonths: 12, pageOrientation: settings.defaults.pageOrientation, accentHex: "#E4002B", showCoverStats: true },
     },
     research: [],
     recommendation: null,

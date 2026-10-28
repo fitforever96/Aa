@@ -3,6 +3,8 @@ import React, { createContext, useContext } from "react";
 import { Document, Font, Image, Page, Path, Polygon, Rect, StyleSheet, Svg, Text, View, Defs, LinearGradient, Stop } from "@react-pdf/renderer";
 import type { PdfModel } from "./model";
 import type { ProposalSection } from "../types";
+import { C } from "./theme";
+import { CompactPages, OnePage } from "./CompactDocument";
 
 /**
  * Premium customer-facing proposal PDF. Vector text (searchable/selectable),
@@ -37,19 +39,7 @@ export function registerPdfFonts(base: string) {
   fontsRegistered = true;
 }
 
-const C = {
-  red: "#E4002B",
-  ink: "#232325",
-  ink2: "#46464C",
-  ink3: "#76767E",
-  line: "#D9DADD",
-  card: "#F2F3F5",
-  card2: "#F7F7F8",
-  dark: "#232326",
-  darker: "#1B1D21",
-  mint: "#B7CFC8",
-  white: "#FFFFFF",
-};
+export { C };
 
 const S = StyleSheet.create({
   page: { fontFamily: "Lato", fontSize: 10.5, color: C.ink2, paddingTop: 84, paddingBottom: 58, paddingHorizontal: 44, backgroundColor: C.white },
@@ -808,15 +798,29 @@ export function estimateHeight(s: ProposalSection, m: PdfModel, contentW: number
 
 // ───────────────────────── Document ─────────────────────────
 
-export function ProposalDocument({ m }: { m: PdfModel }) {
+export function ProposalDocument({ m, level = 0, variant = 0 }: { m: PdfModel; level?: number; variant?: number }) {
   const W = m.orientation === "landscape" ? 792 : 612;
   const H = m.orientation === "landscape" ? 612 : 792;
   const Cover = m.cover.style === "corporate_white" ? CoverWhite : m.cover.style === "property_showcase" ? CoverShowcase : CoverCharcoal;
   const body = m.sections.filter((s) => s.type !== "portfolio_schedules");
   const hasSchedules = m.sections.some((s) => s.type === "portfolio_schedules") && m.schedules.length > 0;
   const headerRight = [m.customer, m.subtitle || "Proposal"].filter(Boolean).join("   |   ").toUpperCase();
+  const docProps = { title: `${m.title}${m.customer ? ` — ${m.customer}` : ""}`, author: m.preparedBy.map((p) => p.name).join(", "), subject: "Orkin Commercial proposal", creator: "Orkin Proposal Studio", producer: "Orkin Proposal Studio", language: "en-US" };
+  if (m.length === "one_page")
+    return (
+      <Document {...docProps}>
+        <OnePage m={m} level={level} W={W} H={H} variant={variant} />
+      </Document>
+    );
+  if (m.length === "two_page" || m.length === "short")
+    return (
+      <Document {...docProps}>
+        {m.length === "short" && <Cover m={m} W={W} H={H} />}
+        <CompactPages m={m} level={level} W={W} H={H} band={m.length === "two_page"} />
+      </Document>
+    );
   return (
-    <Document title={`${m.title}${m.customer ? ` — ${m.customer}` : ""}`} author={m.preparedBy.map((p) => p.name).join(", ")} subject="Orkin Commercial proposal" creator="Orkin Proposal Studio" producer="Orkin Proposal Studio" language="en-US">
+    <Document {...docProps}>
       <Cover m={m} W={W} H={H} />
       <Page size={[W, H]} style={S.page} wrap>
         <View fixed style={S.topBar} />

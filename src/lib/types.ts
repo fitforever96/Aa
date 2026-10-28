@@ -333,6 +333,9 @@ export interface SectionItem {
   body: string;
 }
 
+/** Customer PDF length: same information at every length, condensed to fit. */
+export type DocLength = "one_page" | "two_page" | "short" | "full";
+
 export interface ProposalSection {
   id: ID;
   type: SectionType;
@@ -359,6 +362,8 @@ export interface ProposalDocument {
   date: ISODate;
   sections: ProposalSection[];
   options: {
+    /** Page budget for the customer PDF. Absent means "full" (older proposals). */
+    length?: DocLength;
     showContractTotals: boolean;
     contractMonths: number;
     pageOrientation: "landscape" | "portrait";
@@ -639,6 +644,7 @@ export interface Settings {
     billingMethod: BillingMethod;
     technicians: number;
     pageOrientation: "landscape" | "portrait";
+    docLength?: DocLength;
   };
   activeAssumptionsVersionId: ID;
   defaultExclusions: string[];

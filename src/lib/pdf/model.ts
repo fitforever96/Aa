@@ -1,4 +1,4 @@
-import type { Asset, CoverStyle, Proposal, ProposalSection } from "../types";
+import type { Asset, CoverStyle, DocLength, Proposal, ProposalSection } from "../types";
 import { priceProposal } from "../engine/pricing";
 import { formatMoney } from "../engine/money";
 import { frequencyLabel } from "../engine/frequency";
@@ -49,6 +49,7 @@ export interface PdfModel {
   floorPlans: { src: string; caption: string }[];
   orientation: "landscape" | "portrait";
   accent: string;
+  length: DocLength;
 }
 
 export function formatDateLong(iso: string) {
@@ -141,5 +142,6 @@ export function buildPdfModel(p: Proposal, assets: Asset[]): PdfModel {
     floorPlans: byKind("floor_plan"),
     orientation: p.document.options.pageOrientation,
     accent: p.document.options.accentHex || "#E4002B",
+    length: p.document.options.length ?? "full",
   };
 }

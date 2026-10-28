@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowRight, Check, FileText, PencilLine, Sparkles } from "lucide-react";
 import { Badge, Callout, Card, Page, PageHeader, SectionTitle, Spinner } from "@/components/ui";
 import { VoiceInput } from "@/components/VoiceInput";
+import { LengthPicker } from "@/components/LengthPicker";
+import { db } from "@/lib/db";
+import type { DocLength } from "@/lib/types";
 import { useAIStatus, useOnline, useSettings } from "@/lib/client";
 import { quickBuild, type QuickResult, type QuickStep } from "@/lib/quick/run";
 import { BASIS_LABEL, planRows, type Basis } from "@/lib/quick/brief";
@@ -33,12 +36,19 @@ export default function QuickBuild() {
   const [result, setResult] = useState<QuickResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const useAI = !!ai?.configured && !!settings?.ai.consent && online;
+  const [lengthPick, setLengthPick] = useState<DocLength | null>(null);
+  const length: DocLength = lengthPick ?? settings?.defaults.docLength ?? "two_page";
+  const chooseLength = (v: DocLength) => {
+    setLengthPick(v);
+    // Remember the choice for the next proposal.
+    if (settings) void db().settings.put({ ...settings, defaults: { ...settings.defaults, docLength: v } });
+  };
 
   const build = async () => {
     setError(null);
     setResult(null);
     try {
-      setResult(await quickBuild(text, useAI, setStep));
+      setResult(await quickBuild(text, useAI, setStep, length));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't build the proposal.");
     } finally {
@@ -59,6 +69,8 @@ export default function QuickBuild() {
           <div className="mb-2 text-[15px] font-semibold">Tell me the basics</div>
           <p className="mb-3 text-[13.5px] leading-relaxed text-ink2">Just the address, the pest problem and your price. Say it or type it. I’ll fill in the rest and write the whole proposal.</p>
           <VoiceInput value={text} onChange={setText} rows={4} placeholder="e.g. Riverside Foods, 1234 Woodward Ave, Detroit MI. Mice in the back room and around the loading dock. $350 a visit." />
+          <div className="mt-3 text-[13px] font-semibold">How long?</div>
+          <LengthPicker value={length} onChange={chooseLength} className="mt-1.5" />
           <button className="btn-primary cta-sheen mt-3 w-full !py-3.5 text-[16px]" disabled={text.trim().length < 6 || !!step} onClick={build}>
             {step ? <Spinner /> : <Sparkles size={18} />} {step ? "Building…" : "Build my proposal"}
           </button>

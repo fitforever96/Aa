@@ -1,6 +1,6 @@
 "use client";
 
-import type { Proposal, Settings } from "../types";
+import type { DocLength, Proposal, Settings } from "../types";
 import { activeAssumptionVersion, db, getSettings, saveProposal, snapshotVersion } from "../db";
 import { aiFetch } from "../client";
 import { aiRewrite } from "../aiActions";
@@ -20,8 +20,16 @@ export interface QuickResult {
 const WRITE_INSTRUCTION =
   "Write a complete, customer-specific proposal for this property and pest issue. Fill every section with concrete, site-specific detail drawn from the facts, recommendations and research. Keep it plain, direct and professional.";
 
+/** Shorter documents get tighter copy so they fit without heavy trimming. */
+const LENGTH_NOTE: Record<DocLength, string> = {
+  one_page: " This is a ONE-PAGE proposal: each section gets one or two short sentences, items are a few words with at most one short sentence. Cover every topic, but be very brief.",
+  two_page: " This is a TWO-PAGE proposal: each section gets two or three sentences, items one short sentence. Cover every topic concisely.",
+  short: " This is a SHORT proposal: keep each section to a short paragraph and items to one sentence.",
+  full: "",
+};
+
 /** One-shot build: read the brief, look up the property, plan, price, write and check. */
-export async function quickBuild(brief: string, useAI: boolean, onStep: (s: QuickStep) => void): Promise<QuickResult> {
+export async function quickBuild(brief: string, useAI: boolean, onStep: (s: QuickStep) => void, length: DocLength = "two_page"): Promise<QuickResult> {
   const warnings: string[] = [];
   onStep("read");
   const local = parseBrief(brief);
@@ -41,13 +49,14 @@ export async function quickBuild(brief: string, useAI: boolean, onStep: (s: Quic
   settings = await getSettings();
   const [version, catalog, capabilities] = await Promise.all([activeAssumptionVersion(), db().equipment.toArray(), db().capabilities.toArray()]);
   const built = buildQuickProposal(plan, { settings, version, catalog, capabilities });
+  built.proposal.document.options.length = length;
   let p = built.proposal;
   await saveProposal(p);
 
   if (useAI && plan.mode === "ai") {
     onStep("write");
     try {
-      const r = await aiRewrite(p, settings, { instruction: WRITE_INSTRUCTION, target: "all", allowContractual: false });
+      const r = await aiRewrite(p, settings, { instruction: WRITE_INSTRUCTION + LENGTH_NOTE[length], target: "all", allowContractual: false });
       p = r.proposal;
       await saveProposal(p);
     } catch (e) {

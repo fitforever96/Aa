@@ -5,6 +5,7 @@ import type { PdfQAResult } from "../qc";
 import { buildPdfModel } from "./model";
 import { buildInternalModel } from "./internalModel";
 import { withBase } from "../base";
+import { renderToFit, type Fitted } from "./fit";
 
 /** Client-side PDF generation (works offline). Heavy libraries load on demand. */
 
@@ -14,12 +15,17 @@ async function renderer() {
   return { r, doc };
 }
 
-export async function generateCustomerPdf(p: Proposal, assets: Asset[]): Promise<Blob> {
+/** Customer PDF at the proposal's chosen length; shorter lengths are condensed until they fit. */
+export async function generateCustomerPdf(p: Proposal, assets: Asset[]): Promise<Blob & { fit?: Fitted }> {
   const { r, doc } = await renderer();
   const React = await import("react");
-  const el = React.createElement(doc.ProposalDocument, { m: buildPdfModel(p, assets) });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return r.pdf(el as any).toBlob();
+  const m = buildPdfModel(p, assets);
+  const fit = await renderToFit(m.length, async (level, variant) => {
+    const el = React.createElement(doc.ProposalDocument, { m, level, variant });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return new Uint8Array(await (await r.pdf(el as any).toBlob()).arrayBuffer());
+  });
+  return Object.assign(new Blob([fit.bytes as BlobPart], { type: "application/pdf" }), { fit });
 }
 
 export async function generateInternalPdf(p: Proposal, historical: HistoricalPrice[]): Promise<Blob> {

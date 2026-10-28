@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { useLiveQuery } from "dexie-react-hooks";
 import { AlertTriangle, CheckCircle2, CircleDashed, Download, FileDown, History, RotateCcw, Save, Share, XCircle } from "lucide-react";
@@ -11,6 +11,8 @@ import { db, restoreVersion, snapshotVersion } from "@/lib/db";
 import { STATUS_LABEL, withStatus } from "@/lib/actions";
 import { downloadBlob, relTime, safeFileName, shareOrDownload } from "@/lib/client";
 import type { ProposalStatus } from "@/lib/types";
+import type { Fitted } from "@/lib/pdf/fit";
+import { LengthPicker } from "@/components/LengthPicker";
 import type { StepProps } from "./types";
 
 const GROUP_LABEL: Record<QCGroup, string> = { financial: "Financial", operational: "Operational", legal: "Legal & technical", document: "Document", visual: "Rendered PDF inspection" };
@@ -25,7 +27,7 @@ function StatusIcon({ s }: { s: QCCheck["status"] }) {
 export function StepReview(props: StepProps) {
   const { proposal: p, replace, update, goStep } = props;
   const toast = useToast();
-  const [pdf, setPdf] = useState<{ blob: Blob; previews: string[]; qa: PdfQAResult; at: string } | null>(null);
+  const [pdf, setPdf] = useState<{ blob: Blob; previews: string[]; qa: PdfQAResult; at: string; fit?: Fitted } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [showPassed, setShowPassed] = useState(false);
   const versions = useLiveQuery(() => db().versions.where("proposalId").equals(p.id).reverse().sortBy("versionNumber"), [p.id]);
@@ -41,15 +43,25 @@ export function StepReview(props: StepProps) {
       const assets = await db().assets.where("proposalId").equals(p.id).toArray();
       const blob = await generateCustomerPdf(p, assets);
       const [qa, previews] = await Promise.all([inspectPdf(blob), renderPreviews(blob, 820)]);
-      setPdf({ blob, previews, qa, at: new Date().toISOString() });
+      setPdf({ blob, previews, qa, at: new Date().toISOString(), fit: blob.fit });
       const bad = qa.checks.filter((c) => c.status === "fail").length;
-      toast(bad ? `PDF generated — ${bad} layout issue(s) found` : `PDF generated (${qa.pageCount} pages) and inspected`, bad ? "warn" : "ok");
+      toast(bad ? `PDF generated — ${bad} layout issue(s) found` : `PDF generated (${qa.pageCount} ${qa.pageCount === 1 ? "page" : "pages"}) and inspected`, bad ? "warn" : "ok");
     } catch (e) {
       toast(e instanceof Error ? `PDF generation failed: ${e.message}` : "PDF generation failed", "error");
     } finally {
       setBusy(null);
     }
   };
+
+  // Changing the length re-renders an existing preview right away.
+  const length = p.document.options.length ?? "full";
+  const lastLength = useRef(length);
+  useEffect(() => {
+    if (lastLength.current === length) return;
+    lastLength.current = length;
+    if (pdf && !busy) void generate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [length]);
 
   const exportPdf = async (mode: "share" | "download") => {
     if (!pdf || stale) return toast("Regenerate the PDF first — the proposal changed.", "warn");
@@ -135,6 +147,7 @@ export function StepReview(props: StepProps) {
       <div>
         <SectionTitle>Customer proposal PDF</SectionTitle>
         <Card className="space-y-3">
+          <LengthPicker value={length} onChange={(v) => update((d) => void (d.document.options.length = v))} />
           <div className="flex flex-wrap gap-2">
             <button className="btn-primary" disabled={!!busy || !p.document.sections.length} onClick={generate}>
               {busy === "generate" ? <Spinner /> : <FileDown size={18} />} {pdf ? "Regenerate PDF" : "Generate PDF"}
@@ -146,7 +159,12 @@ export function StepReview(props: StepProps) {
           {stale && <Callout tone="warn">The proposal changed after this PDF was generated. Regenerate before exporting.</Callout>}
           {pdf && (
             <>
-              <div className="text-[12.5px] text-ink3">{pdf.qa.pageCount} pages · {(pdf.blob.size / 1024).toFixed(0)} KB · searchable text with embedded fonts · inspected {relTime(pdf.at)}</div>
+              {pdf.fit && !pdf.fit.fits && (
+                <Callout tone="warn">
+                  This proposal needs {pdf.fit.pages} pages even at its tightest, so it can’t fit in {pdf.fit.target}. Nothing was left out. Long property schedules or a large scope take the extra room; choose a longer option or turn off a section on the Document step.
+                </Callout>
+              )}
+              <div className="text-[12.5px] text-ink3">{pdf.qa.pageCount} {pdf.qa.pageCount === 1 ? "page" : "pages"} · {(pdf.blob.size / 1024).toFixed(0)} KB · searchable text with embedded fonts · inspected {relTime(pdf.at)}</div>
               <div className="scrollbar-none -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
                 {pdf.previews.map((src, i) => (
                   <div key={i} className="w-[86%] shrink-0 snap-center sm:w-[60%] lg:w-[44%]">
