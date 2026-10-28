@@ -77,6 +77,11 @@ export function applyIntake(p: Proposal, x: IntakeExtraction, catalog: Equipment
   if (x.services.length) {
     prog.services = [...new Set(x.services)];
     prog.name = prog.services.length === 1 ? SERVICE_LABELS[prog.services[0]] : "Recurring service program";
+    if (!p.templateUsed || p.templateUsed === "blank") {
+      const main = SERVICE_LABELS[prog.services[0]].replace(/ (control|management)$/i, "");
+      const site = x.propertyType ? x.propertyType.replace(/^\w/, (c) => c.toUpperCase()) + " " : "";
+      p.title = `${site}${main} Management Program`.replace(/Management Management/, "Management");
+    }
   }
   if (x.frequency) {
     prog.frequency = x.frequency;

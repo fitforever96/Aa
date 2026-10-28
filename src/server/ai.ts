@@ -2,6 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { timingSafeEqual } from "node:crypto";
+import { transformJSONSchema } from "@anthropic-ai/sdk/lib/transform-json-schema";
 
 /**
  * Server-side AI gateway. The API key lives only in server environment variables
@@ -83,8 +84,10 @@ type Content = Anthropic.Beta.Messages.BetaContentBlockParam[];
 
 /** Structured JSON call. Arithmetic is never delegated to the model. */
 export async function callJSON<T>(opts: { system: string; content: string | Content; schema: z.ZodType<T>; maxTokens?: number; effort?: "low" | "medium" | "high" }): Promise<T> {
-  const jsonSchema = z.toJSONSchema(opts.schema, { target: "draft-7" }) as Record<string, unknown>;
-  delete jsonSchema.$schema;
+  const raw = z.toJSONSchema(opts.schema, { target: "draft-7" }) as Record<string, unknown>;
+  delete raw.$schema;
+  // The SDK transformer moves unsupported constraints (lengths, ranges…) into descriptions; zod still validates them on return.
+  const jsonSchema = transformJSONSchema(raw);
   const stream = client().beta.messages.stream({
     model: MODEL,
     max_tokens: opts.maxTokens ?? 16000,

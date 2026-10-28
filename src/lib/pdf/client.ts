@@ -65,3 +65,29 @@ export async function renderPreviews(blob: Blob, width = 900): Promise<string[]>
   }
   return out;
 }
+
+/**
+ * Replace (or prepend) the cover of an existing PDF while keeping every other page
+ * byte-for-byte as rendered by the original document.
+ */
+export async function replaceCover(original: Uint8Array, p: Proposal, assets: Asset[], mode: "replace" | "prepend"): Promise<Blob> {
+  const { PDFDocument } = await import("pdf-lib");
+  const src = await PDFDocument.load(original, { ignoreEncryption: false });
+  const first = src.getPage(0);
+  const { width, height } = first.getSize();
+  const { r, doc } = await renderer();
+  const React = await import("react");
+  const el = React.createElement(doc.CoverOnlyDocument, { m: buildPdfModel(p, assets), W: width, H: height });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const coverBlob = await r.pdf(el as any).toBlob();
+  const cover = await PDFDocument.load(new Uint8Array(await coverBlob.arrayBuffer()));
+  const out = await PDFDocument.create();
+  const [c] = await out.copyPages(cover, [0]);
+  out.addPage(c);
+  const keep = src.getPageIndices().slice(mode === "replace" ? 1 : 0);
+  for (const pg of await out.copyPages(src, keep)) out.addPage(pg);
+  out.setTitle(p.title);
+  out.setCreator("Orkin Proposal Studio");
+  const bytes = await out.save();
+  return new Blob([bytes as BlobPart], { type: "application/pdf" });
+}

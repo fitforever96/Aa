@@ -55,7 +55,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <ToastProvider>
       {!splashDone && (
-        <div className={clsx("fixed inset-0 z-[100] flex flex-col items-center justify-center bg-bg transition-opacity duration-300", ready && "opacity-0")}>
+        <div className={clsx("fixed inset-0 z-[100] flex flex-col items-center justify-center bg-bg transition-opacity duration-300", ready && "pointer-events-none opacity-0")}>
           <Wordmark size={46} />
           <div className="mt-2 text-[12px] font-semibold uppercase tracking-[0.32em] text-ink3">Proposal Studio</div>
           {error && <div className="mt-6 max-w-xs text-center text-[13px] text-red">Local storage is unavailable ({error}). Private browsing can block IndexedDB.</div>}

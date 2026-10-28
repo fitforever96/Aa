@@ -11,7 +11,7 @@ import { analyzePdf, type PdfjsLike } from "@/lib/pdf/qa";
 import { warehouse, portfolio, restaurant } from "../scripts/samples";
 
 async function textOf(buf: Uint8Array) {
-  const doc = await pdfjs.getDocument({ data: buf.slice(), isEvalSupported: false }).promise;
+  const doc = await pdfjs.getDocument({ data: buf.slice() }).promise;
   let s = "";
   for (let i = 1; i <= doc.numPages; i++) {
     const tc = await (await doc.getPage(i)).getTextContent();

@@ -248,3 +248,20 @@ describe("Customer price map", () => {
     expect(m[`${p.programs[0].id}:recurring`]).toBe(15000);
   });
 });
+
+import { collectRows, groupStats } from "@/lib/engine/calibration";
+describe("Calibration", () => {
+  it("suggests the median ratio after 3 observations and never touches confirmed device minutes", () => {
+    const p = proposalWith(deviceProgram(40, 30));
+    p.property.squareFeet = 50000;
+    const est = estimateProgram(p.property, p.programs[0], p.assumptions).recurring.technicianMinutes;
+    for (const m of [1.2, 1.1, 1.3]) p.programs[0].actuals.push({ id: String(m), date: "2026-10-01", phase: "recurring", actualTechnicianMinutes: est * m, technicians: 1, estimatedTechnicianMinutes: est, notes: "" });
+    const g = groupStats(collectRows([p]), (r) => r.model)[0];
+    expect(g.n).toBe(3);
+    expect(g.medianRatio).toBeCloseTo(1.2, 5);
+    p.assumptions.calibration[p.property.model] = { factor: g.medianRatio, approvedAt: "x", basis: "test" };
+    const after = estimateProgram(p.property, p.programs[0], p.assumptions);
+    expect(after.deviceServicing.minutes).toBe(100);
+    expect(after.recurring.technicianMinutes).toBeGreaterThan(est);
+  });
+});

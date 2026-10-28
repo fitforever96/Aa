@@ -861,3 +861,13 @@ export function ProposalDocument({ m }: { m: PdfModel }) {
     </Document>
   );
 }
+
+/** Cover page alone, sized to match an existing document (used by "keep everything except the cover"). */
+export function CoverOnlyDocument({ m, W, H }: { m: PdfModel; W: number; H: number }) {
+  const Cover = m.cover.style === "corporate_white" ? CoverWhite : m.cover.style === "property_showcase" ? CoverShowcase : CoverCharcoal;
+  return (
+    <Document title={m.title} creator="Orkin Proposal Studio">
+      <Cover m={m} W={W} H={H} />
+    </Document>
+  );
+}
