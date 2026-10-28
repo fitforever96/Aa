@@ -3,7 +3,7 @@
 import type { Settings } from "../types";
 import { db } from "../db";
 import { GENERIC_STANDARD } from "./standard";
-import { AIHttpError, type AICtx } from "./engine";
+import { AIHttpError, describeError, type AICtx } from "./engine";
 
 /**
  * On-device ("direct") mode: the app calls Claude from this phone with Anthony's own
@@ -48,8 +48,7 @@ export async function friendlyError(e: unknown): Promise<string> {
     if (/credit balance|billing/i.test(e.message)) return "Your Anthropic account needs credits. Add billing at console.anthropic.com › Billing.";
     if (e.status === 529 || /overloaded/i.test(e.message)) return "Claude is overloaded right now. Try again in a minute.";
     // The API's own explanation (never contains proposal content) makes faults diagnosable.
-    const detail = ((e.error as { error?: { message?: string } } | undefined)?.error?.message ?? "").slice(0, 300);
-    return `Claude returned an error (${e.status ?? "unknown"})${detail ? `: ${detail}` : "."}`;
+    return `Claude returned an error ${describeError(e)}`;
   }
   return e instanceof Error ? e.message : "AI request failed.";
 }

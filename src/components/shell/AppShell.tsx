@@ -12,6 +12,7 @@ import { useOnline, useSeeded, useSettings } from "@/lib/client";
 import { Wordmark } from "../ui";
 import { withBase } from "@/lib/base";
 import { Intro } from "./Intro";
+import { BUILD_ID } from "@/lib/build";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: Home },
@@ -105,6 +106,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <ToastProvider>
       <Intro ready={ready} error={error} onExit={onIntroExit} />
+      <UpdateBanner />
       {/* Faint HUD grid behind every screen. */}
       <div className="hud-backdrop pointer-events-none fixed inset-0 -z-10" aria-hidden />
       <div className={clsx("lg:pl-[232px]", entered && "app-enter")}>
@@ -166,5 +168,37 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </nav>
     </ToastProvider>
+  );
+}
+
+/** Tells you when a newer version has been published, so fixes reach the phone without guesswork. */
+function UpdateBanner() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (BUILD_ID === "dev") return;
+    const check = () =>
+      fetch(withBase("/build.json"), { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j: { build?: string } | null) => j?.build && j.build !== BUILD_ID && setReady(true))
+        .catch(() => {});
+    void check();
+    const onVis = () => document.visibilityState === "visible" && void check();
+    document.addEventListener("visibilitychange", onVis);
+    const t = setInterval(check, 10 * 60_000);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      clearInterval(t);
+    };
+  }, []);
+  if (!ready) return null;
+  return (
+    <div className="pt-safe pointer-events-none fixed inset-x-0 top-0 z-[80] flex justify-center px-4">
+      <div className="hud-toast pointer-events-auto relative mt-2 flex items-center gap-3 overflow-hidden rounded-xl border border-white/10 bg-surface/95 py-2 pl-4 pr-2 shadow-2xl backdrop-blur-xl before:bg-ok">
+        <span className="text-[13px] font-medium">A new version is ready</span>
+        <button className="btn-primary btn-sm" onClick={() => location.reload()}>
+          Update
+        </button>
+      </div>
+    </div>
   );
 }

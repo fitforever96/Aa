@@ -10,6 +10,7 @@ import { Badge, Callout, Card, Page, PageHeader, SectionTitle, Select, Spinner, 
 import { useToast } from "@/components/shell/Toast";
 import { formatMoney } from "@/lib/engine/money";
 import { UnlockPrivateData } from "@/components/UnlockPrivateData";
+import { EngineTest } from "@/components/EngineTest";
 import { ClaudeKeySetup } from "@/components/ClaudeKeySetup";
 import { IntroSoundToggle } from "@/components/IntroSoundToggle";
 import type { Settings } from "@/lib/types";
@@ -163,6 +164,7 @@ export default function SettingsPage() {
             <ClaudeKeySetup settings={s} />
           )}
           <Toggle checked={s.ai.consent} onChange={(v) => save((x) => void (x.ai.consent = v))} label="Allow sending proposal content to the AI provider" description="Required before any AI or research request. Off by default." />
+          {ai?.configured && s.ai.consent && <EngineTest />}
           <Toggle checked={s.ai.researchEnabled} onChange={(v) => save((x) => void (x.ai.researchEnabled = v))} label="Enable web research" description="Searches orkin.com/commercial first, then EPA, CDC, USDA, OSHA and university extension sites." />
           {ai?.passcodeRequired && <TextField label="Access passcode" type="password" value={s.ai.accessToken} onChange={(v) => save((x) => void (x.ai.accessToken = v))} hint="Matches APP_ACCESS_TOKEN on the server. Stored on this device only; excluded from backups." />}
           <Callout title="What stays on this device / what is sent">

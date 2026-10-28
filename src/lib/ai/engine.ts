@@ -21,33 +21,72 @@ export class AIHttpError extends Error {
 
 type Content = Anthropic.Beta.Messages.BetaContentBlockParam[];
 
-/** Structured JSON call. Arithmetic is never delegated to the model. */
+/** How a structured call is sent; later modes are simpler fallbacks when the API rejects a request shape. */
+type Mode = "structured+fallback" | "structured" | "plain";
+
+/**
+ * Structured JSON call. Arithmetic is never delegated to the model.
+ * If the API rejects the request shape (400), it is retried in simpler forms: without refusal
+ * fallbacks, then as plain JSON text validated here. Every attempt's reason is kept for the error.
+ */
 export async function callJSON<T>(ctx: AICtx, opts: { system: string; content: string | Content; schema: z.ZodType<T>; maxTokens?: number; effort?: "low" | "medium" | "high" }): Promise<T> {
   const raw = z.toJSONSchema(opts.schema, { target: "draft-7" }) as Record<string, unknown>;
   delete raw.$schema;
   // The SDK transformer moves unsupported constraints (lengths, ranges…) into descriptions; the reply is trimmed to them on return.
   const jsonSchema = transformJSONSchema(raw);
-  const stream = ctx.client.beta.messages.stream({
+  const attempts: string[] = [];
+  for (const mode of ["structured+fallback", "structured", "plain"] as Mode[]) {
+    try {
+      const text = await send(ctx, opts, mode, jsonSchema);
+      let data: unknown;
+      try {
+        data = mode === "plain" ? extractJson(text) : JSON.parse(text);
+      } catch {
+        data = null;
+      }
+      if (data == null) throw new AIHttpError(502, "The AI returned malformed JSON.");
+      return conform(opts.schema, sanitize(data, raw, raw));
+    } catch (e) {
+      const status = (e as { status?: number }).status;
+      // Only a rejected request shape is worth another form; anything else (key, credit, rate, refusal) is reported as is.
+      if (status !== 400 || mode === "plain") {
+        if (!attempts.length) throw e;
+        throw new AIHttpError(status ?? 502, `${attempts.join(" Then: ")} Then: ${describeError(e)}`);
+      }
+      attempts.push(describeError(e));
+    }
+  }
+  throw new AIHttpError(502, attempts.join(" Then: "));
+}
+
+async function send(ctx: AICtx, opts: { system: string; content: string | Content; maxTokens?: number; effort?: "low" | "medium" | "high" }, mode: Mode, jsonSchema: Record<string, unknown>): Promise<string> {
+  const plain = mode === "plain";
+  const system = plain ? `${opts.system}\n\nOUTPUT: reply with only one JSON object that matches this JSON Schema. No prose, no code fences.\n${JSON.stringify(jsonSchema)}` : opts.system;
+  const params = {
     model: ctx.model,
     max_tokens: opts.maxTokens ?? 16000,
     // Long, stable system prompt (master memory) is cached across requests.
-    system: [{ type: "text", text: opts.system, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: opts.content }],
-    output_config: { effort: opts.effort ?? "medium", format: { type: "json_schema", schema: jsonSchema } },
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
-  });
-  const msg = await stream.finalMessage();
-  if (msg.stop_reason === "refusal") throw new AIHttpError(422, "The AI declined this request.");
-  if (msg.stop_reason === "max_tokens") throw new AIHttpError(502, "The AI response was cut off. Try a smaller request.");
-  const text = msg.content.map((b) => (b.type === "text" ? b.text : "")).join("");
-  let data: unknown;
-  try {
-    data = JSON.parse(text);
-  } catch {
-    throw new AIHttpError(502, "The AI returned malformed JSON.");
+    system: [{ type: "text" as const, text: system, cache_control: { type: "ephemeral" as const } }],
+    messages: [{ role: "user" as const, content: opts.content }],
+    output_config: plain ? { effort: opts.effort ?? "medium" } : { effort: opts.effort ?? "medium", format: { type: "json_schema" as const, schema: jsonSchema } },
+  };
+  const msg =
+    mode === "structured+fallback"
+      ? await ctx.client.beta.messages.stream({ ...params, betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" }).finalMessage()
+      : await ctx.client.beta.messages.stream(params).finalMessage();
+  if (msg.stop_reason === "refusal") {
+    const category = (msg as { stop_details?: { category?: string | null } }).stop_details?.category;
+    throw new AIHttpError(422, `Claude's safety filter declined this request${category ? ` (category: ${category})` : ""}. Rewording the request usually gets past it.`);
   }
-  return conform(opts.schema, sanitize(data, raw, raw));
+  if (msg.stop_reason === "max_tokens") throw new AIHttpError(502, "The AI response was cut off. Try a smaller request.");
+  return msg.content.map((b) => (b.type === "text" ? b.text : "")).join("");
+}
+
+/** One line per failure: status, the API's own message and its request id (no proposal content). */
+export function describeError(e: unknown): string {
+  const x = e as { status?: number; requestID?: string | null; error?: { error?: { type?: string; message?: string } }; message?: string };
+  const detail = x.error?.error?.message ?? x.message ?? String(e);
+  return `${x.status ? `(${x.status}${x.error?.error?.type ? ` ${x.error.error.type}` : ""}) ` : ""}${detail.slice(0, 300)}${x.requestID ? ` [${x.requestID}]` : ""}`;
 }
 
 type JSONSchema = { [k: string]: unknown };

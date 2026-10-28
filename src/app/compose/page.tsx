@@ -17,6 +17,7 @@ import { composeTurn, prepareAttachment, wantsLookup, type ComposeStep, type Pre
 import { playBuildDone, playBuildStart, playBuildStep, prepareBuildSounds, unlockBuildSounds } from "@/lib/chime";
 import { LENGTH_OPTIONS } from "@/lib/pdf/condense";
 import type { ChatTurn, DocLength, Proposal } from "@/lib/types";
+import { BUILD_ID } from "@/lib/build";
 
 /** Same id the on-device AI uses for the governing proposal standard. */
 const MASTER_MEMORY_ID = "doc_master_memory";
@@ -86,7 +87,7 @@ function Composer() {
   const [files, setFiles] = useState<PreparedAttachment[]>([]);
   const [answering, setAnswering] = useState<string | null>(null);
   const [working, setWorking] = useState<Working | null>(null);
-  const [failed, setFailed] = useState<{ request: string; attachments: PreparedAttachment[]; message: string } | null>(null);
+  const [failed, setFailed] = useState<{ request: string; attachments: PreparedAttachment[]; message: string; at: string; secs: number } | null>(null);
   // Replies that arrive after this moment animate in.
   const [freshSince, setFreshSince] = useState<number | null>(null);
   const [chips, setChips] = useState<BuildChip[] | null>(null);
@@ -134,6 +135,7 @@ function Composer() {
       setLog(composeLog(request, withAI, length, { attachments: attachments.length, memoryWords: withAI ? memoryWords : 0 }));
       setBuildDone(false);
     }
+    const started = Date.now();
     // Each step stays on screen long enough to read, even when it finishes instantly.
     const minMs = first ? 1300 : 700;
     let chain = Promise.resolve();
@@ -165,7 +167,7 @@ function Composer() {
       await chain;
       setWorking(null);
       setChips(null);
-      setFailed({ request, attachments, message: e instanceof Error ? e.message : "The engine couldn't finish that request." });
+      setFailed({ request, attachments, message: e instanceof Error ? e.message : "The engine couldn't finish that request.", at: new Date().toLocaleString("en-US"), secs: Math.round((Date.now() - started) / 1000) });
     }
   };
 
@@ -291,7 +293,10 @@ function Composer() {
           {busy && working && !working.first && <WorkingCard working={working} />}
           {failed && (
             <AssistantShell label="ENGINE · FAULT" tone="red">
-              <p className="text-[14.5px] leading-relaxed">{failed.message}</p>
+              <p className="whitespace-pre-wrap break-words text-[14.5px] leading-relaxed">{failed.message}</p>
+              <div className="hud-mono mt-2 text-[10px] uppercase text-ink3">
+                Build {BUILD_ID} · {failed.at} · after {failed.secs}s · {useAI ? "Claude" : "local"}
+              </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button className="btn-secondary !py-2 text-[13.5px]" onClick={() => void send(failed)}>
                   <RotateCcw size={15} /> Try again
@@ -301,6 +306,19 @@ function Composer() {
                     Use the local engine instead
                   </button>
                 )}
+                <button
+                  className="btn-ghost !py-2 text-[13.5px]"
+                  onClick={() => {
+                    // Diagnostics only: the error, build and timing. No proposal content.
+                    const text = `Proposal engine fault\n${failed.message}\nBuild ${BUILD_ID} · ${failed.at} · after ${failed.secs}s · ${useAI ? "Claude" : "local"} · ${navigator.userAgent}`;
+                    void navigator.clipboard?.writeText(text).then(
+                      () => toast("Error details copied. Paste them to whoever is fixing it.", "ok"),
+                      () => toast("Couldn't copy. Take a screenshot instead.", "warn"),
+                    );
+                  }}
+                >
+                  Copy details
+                </button>
               </div>
             </AssistantShell>
           )}
