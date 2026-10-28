@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { introSoundEnabled, playChime } from "@/lib/chime";
+import { introSoundEnabled, playChime, prepareChime } from "@/lib/chime";
 
 const SEEN_KEY = "ops-intro-seen";
 const MIN_MS = 2300;
@@ -31,7 +31,14 @@ export function Intro({ ready, error, onExit }: { ready: boolean; error: string 
       sessionStorage.setItem(SEEN_KEY, "1");
     } catch {}
     const t = setTimeout(() => setMinDone(true), MIN_MS);
-    if (introSoundEnabled()) playChime().then((ok) => (soundPending.current = !ok));
+    if (introSoundEnabled()) {
+      soundPending.current = true;
+      prepareChime()
+        .then(() => playChime())
+        .then((ok) => {
+          if (ok) soundPending.current = false;
+        });
+    }
     return () => clearTimeout(t);
   }, [full]);
 
