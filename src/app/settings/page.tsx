@@ -9,6 +9,7 @@ import { downloadBlob, useAIStatus, useSettings } from "@/lib/client";
 import { Badge, Callout, Card, Page, PageHeader, SectionTitle, Segmented, Select, Spinner, TextField, Toggle, NumberField } from "@/components/ui";
 import { useToast } from "@/components/shell/Toast";
 import { formatMoney } from "@/lib/engine/money";
+import { UnlockPrivateData } from "@/components/UnlockPrivateData";
 import type { Settings } from "@/lib/types";
 
 export default function SettingsPage() {
@@ -136,7 +137,8 @@ export default function SettingsPage() {
             <li>RFP requirements matrix for government and procurement proposals</li>
             <li>Plain, direct style: no buzzwords, excessive em dashes or exclamation marks</li>
           </ul>
-          <p className="text-[12px] text-ink3">Your historical pricing and project precedents are customer-confidential, so they are not part of the published app. Import your private data pack (Restore › Merge) to load them on this device.</p>
+          <p className="text-[12px] text-ink3">Your historical pricing and project precedents are customer-confidential, so the published app carries them only in encrypted form. Enter your passcode to load them on this device:</p>
+          <UnlockPrivateData compact />
         </Card>
 
         <SectionTitle>AI & research</SectionTitle>

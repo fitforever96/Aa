@@ -13,6 +13,7 @@ import { priceProposal } from "@/lib/engine/pricing";
 import { formatMoney } from "@/lib/engine/money";
 import { frequencyLabel } from "@/lib/engine/frequency";
 import { useToast } from "@/components/shell/Toast";
+import { UnlockPrivateData } from "@/components/UnlockPrivateData";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -86,13 +87,9 @@ export default function Dashboard() {
         </div>
 
         {historicalCount === 0 && (
-          <Link href="/settings#backup" className="card mt-3 flex items-center gap-3 border-warn/30 p-4">
-            <FileUp size={20} className="shrink-0 text-warn" />
-            <span className="min-w-0 flex-1">
-              <span className="block text-[14px] font-semibold">Load your private data pack</span>
-              <span className="block text-[12.5px] text-ink3">Historical pricing and precedents are kept out of the public app. Settings › Restore from backup › Merge.</span>
-            </span>
-          </Link>
+          <div className="mt-3">
+            <UnlockPrivateData />
+          </div>
         )}
 
         <div className="mt-6 grid grid-cols-3 gap-2.5">

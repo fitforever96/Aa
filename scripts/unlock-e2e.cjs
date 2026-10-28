@@ -1,0 +1,33 @@
+// Unlock E2E: node scripts/unlock-e2e.cjs <passcode-file> <base-url>  (passcode is never stored in the repo)
+const { chromium, devices } = require("playwright");
+const fs = require("fs");
+const pass = fs.readFileSync(process.argv[2], "utf8").trim();
+const base = process.argv[3];
+(async () => {
+  const b = await chromium.launch();
+  const ctx = await b.newContext({ ...devices["iPhone 15 Pro"] });
+  const p = await ctx.newPage();
+  const errs = []; p.on("pageerror", (e) => errs.push(e.message));
+  await p.goto(base + "/");
+  await p.waitForSelector("text=Load your private data");
+  await p.fill("input[aria-label='Private data passcode']", "WRONG-WRON-GWRO-NGXX");
+  await p.click("button:has-text('Unlock')");
+  await p.waitForSelector("text=didn’t unlock", { timeout: 30000 });
+  console.log("wrong passcode rejected: yes");
+  await p.fill("input[aria-label='Private data passcode']", pass.toLowerCase());
+  const t0 = Date.now();
+  await p.click("button:has-text('Unlock')");
+  await p.waitForSelector("text=Private data loaded", { timeout: 60000 });
+  console.log("unlocked in", Date.now() - t0, "ms");
+  await p.waitForTimeout(500);
+  console.log("unlock card hidden:", (await p.locator("text=Load your private data").count()) === 0);
+  await p.goto(base + "/knowledge?tab=historical");
+  await p.waitForSelector("text=GM Pontiac Engineering Center");
+  console.log("historical rows:", await p.locator("text=Customer-specific historical price").count());
+  await p.goto(base + "/knowledge?tab=documents");
+  await p.waitForSelector("text=Master memory");
+  console.log("master memory doc: present");
+  await p.reload(); await p.waitForSelector("text=Master memory");
+  console.log("persists after reload: yes; errors:", errs.length ? errs : "none");
+  await b.close();
+})().catch((e) => { console.error("FAILED", e.message.split("\n")[0]); process.exit(1); });
