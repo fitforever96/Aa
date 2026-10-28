@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ArrowRight, Calculator, FileUp, Mic, Plus, Settings as Cog, Sparkles } from "lucide-react";
+import { ArrowRight, Calculator, FileUp, Plus, Settings as Cog, Sparkles } from "lucide-react";
 import { db } from "@/lib/db";
 import { relTime, useSettings } from "@/lib/client";
 import { Badge, Card, EmptyState, Page, SectionTitle, Wordmark } from "@/components/ui";
@@ -60,22 +60,22 @@ export default function Dashboard() {
           </h1>
         </div>
 
-        <button onClick={() => start()} className="group mt-5 flex w-full items-center gap-4 overflow-hidden rounded-3xl bg-red p-5 text-left text-white shadow-xl shadow-red/20 transition active:scale-[0.99]">
+        <Link href="/quick" className="group mt-5 flex w-full items-center gap-4 overflow-hidden rounded-3xl bg-red p-5 text-left text-white shadow-xl shadow-red/20 transition active:scale-[0.99]">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15">
-            <Plus size={26} strokeWidth={2.4} />
+            <Sparkles size={26} strokeWidth={2.2} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block font-display text-[22px] font-bold uppercase leading-tight tracking-wide">New Proposal</span>
-            <span className="block text-[13px] text-white/80">Customer → scope → labor → price → PDF</span>
+            <span className="block font-display text-[22px] font-bold uppercase leading-tight tracking-wide">Build a Proposal</span>
+            <span className="block text-[13px] text-white/80">Say the address, pest and price. I’ll do the rest.</span>
           </span>
           <ArrowRight className="shrink-0 transition group-hover:translate-x-1" />
-        </button>
+        </Link>
 
         <div className="mt-3 grid grid-cols-3 gap-2.5">
-          <Link href="/new?mode=voice" className="card flex flex-col items-start gap-2 p-3.5 transition active:scale-[0.98]">
-            <Mic size={20} className="text-red" />
-            <span className="text-[13px] font-semibold leading-tight">Dictate a job</span>
-          </Link>
+          <button onClick={() => start()} className="card flex flex-col items-start gap-2 p-3.5 text-left transition active:scale-[0.98]">
+            <Plus size={20} className="text-red" />
+            <span className="text-[13px] font-semibold leading-tight">Step by step</span>
+          </button>
           <Link href="/estimates" className="card flex flex-col items-start gap-2 p-3.5 transition active:scale-[0.98]">
             <Calculator size={20} className="text-red" />
             <span className="text-[13px] font-semibold leading-tight">Quick estimate</span>

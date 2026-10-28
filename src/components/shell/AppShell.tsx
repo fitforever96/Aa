@@ -13,7 +13,7 @@ import { withBase } from "@/lib/base";
 const NAV = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/estimates", label: "Estimates", icon: Calculator },
-  { href: "/new", label: "New", icon: Plus, primary: true },
+  { href: "/quick", label: "New", icon: Plus, primary: true },
   { href: "/library", label: "Library", icon: FolderOpen },
   { href: "/knowledge", label: "Knowledge", icon: BookOpen },
 ];
@@ -76,7 +76,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Wordmark size={28} />
             <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-ink3">Proposal Studio</div>
           </div>
-          <Link href="/new" className="btn-primary mb-4 w-full">
+          <Link href="/quick" className="btn-primary mb-4 w-full">
             <Plus size={18} /> New Proposal
           </Link>
           <nav className="flex flex-col gap-0.5">

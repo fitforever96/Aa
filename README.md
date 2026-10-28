@@ -6,6 +6,7 @@ A mobile-first progressive web app (PWA) for commercial pest-management proposal
 
 | Area | What's implemented |
 |---|---|
+| **Quick Build** | One box on the home screen: say or type the address, pest issue and price. With Claude connected, it looks up the property online (business, size, buildings), plans services, frequency and device layout, locks your stated price exactly, writes every section and runs QC. A summary labels each filled-in item *You said*, *Found online* or *Estimate* and lists what to check before sending. Without Claude it builds the same complete draft from built-in rules and the template writer. Contact details are never invented; a monthly price is never silently converted to per-visit. |
 | **Workflow** | Dashboard → New Proposal (templates or dictation) → 8-step workspace: Customer · Services · Conditions · Equipment · Labor · Pricing · Document · Review/Export |
 | **Labor estimator** | Deterministic engine with seven components (equipment servicing, installation, walking, inspection, treatment, access/setup, documentation). Separate initial and recurring phases. Multiple technicians, with technician-hours kept distinct from elapsed time. Confidence rating, a formula on every line, and provenance badges (Confirmed / Estimate / Measured / Calibrated). Eleven property models (office, industrial, multifamily by apartments-per-visit, restaurant, warehouse, healthcare, government, campus, exterior-only, specialty…). |
 | **Confirmed standards** | $210/hr billable estimating rate ($3.50/min); Tin Cat 1 min; exterior bait station 2 min. Never multiplied by complexity or calibration factors. |
@@ -45,7 +46,7 @@ To change the standard, update the `MASTER_MEMORY` environment variable and rede
 npm install          # also copies the PDF.js worker and PDF fonts into /public
 cp .env.example .env.local   # optional: add ANTHROPIC_API_KEY to enable AI
 npm run dev          # http://localhost:3000
-npm test             # 81 tests: calculations, guards, QC, persistence, import, PDF export + visual QA
+npm test             # 90 tests: calculations, guards, QC, persistence, import, PDF export + visual QA
 npm run build && npm start
 ```
 

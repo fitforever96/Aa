@@ -18,6 +18,7 @@ const TASKS = {
   "/api/ai/command": () => import("./tasks/command"),
   "/api/ai/extract": () => import("./tasks/extract"),
   "/api/ai/recommend": () => import("./tasks/recommend"),
+  "/api/ai/draft": () => import("./tasks/draft"),
 } as const;
 
 export const MASTER_MEMORY_DOC_ID = "doc_master_memory";

@@ -81,7 +81,7 @@ export interface ResearchOut {
 }
 
 /** Live research using Anthropic's server-side web search, restricted to authoritative domains. */
-export async function research(ctx: AICtx, system: string, prompt: string, extraDomains: string[] = []): Promise<ResearchOut> {
+export async function research(ctx: AICtx, system: string, prompt: string, extraDomains: string[] = [], opts: { open?: boolean } = {}): Promise<ResearchOut> {
   const domains = [...new Set([...RESEARCH_DOMAINS, ...extraDomains])].slice(0, 60);
   const messages: Anthropic.Beta.Messages.BetaMessageParam[] = [{ role: "user", content: prompt }];
   const sources = new Map<string, string>();
@@ -93,7 +93,8 @@ export async function research(ctx: AICtx, system: string, prompt: string, extra
       max_tokens: 16000,
       system,
       messages,
-      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 6, allowed_domains: domains }],
+      // Open search is used only to identify a property from its address; topic research stays on authoritative domains.
+      tools: [opts.open ? { type: "web_search_20260209", name: "web_search", max_uses: 8 } : { type: "web_search_20260209", name: "web_search", max_uses: 6, allowed_domains: domains }],
       output_config: { effort: "medium" },
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",

@@ -29,7 +29,7 @@ export async function run(ctx: AICtx, body: z.infer<typeof Body>) {
     ]
       .filter(Boolean)
       .join("\n\n");
-    const out = await callJSON(ctx, { system: writingStandard(ctx.memory), content: prompt, schema: Out, effort: "medium" });
+    const out = await callJSON(ctx, { system: writingStandard(ctx.memory), content: prompt, schema: Out, effort: "medium", maxTokens: 32000 });
     const allowed = new Set(targets.map((t) => t.id));
     return ({ revisions: out.revisions.filter((r) => allowed.has(r.sectionId)), notes: out.notes });
 }
