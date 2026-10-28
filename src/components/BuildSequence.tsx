@@ -34,6 +34,11 @@ function useEased(target: number, ms = 1100) {
   return v;
 }
 
+function clock(sec: number) {
+  const s = Math.floor(sec);
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+}
+
 function Reactor({ progress, done, pulseKey }: { progress: number; done: boolean; pulseKey: string }) {
   const lit = Math.round(progress * SEGMENTS);
   return (
@@ -103,7 +108,23 @@ export function BuildSequence({ mode, steps, current, done, chips, log, onFinish
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const idx = Math.max(0, steps.findIndex((s) => s.key === current));
-  const target = done ? 1 : Math.min(0.96, (idx + 0.85) / steps.length);
+  // Long steps (Claude writing for a minute or two) keep creeping forward instead of stalling.
+  const [stepAge, setStepAge] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const t0 = performance.now();
+    setStepAge(0);
+    const t = setInterval(() => setStepAge((performance.now() - t0) / 1000), 1000);
+    return () => clearInterval(t);
+  }, [idx]);
+  useEffect(() => {
+    if (done) return;
+    const t0 = performance.now();
+    const t = setInterval(() => setElapsed((performance.now() - t0) / 1000), 1000);
+    return () => clearInterval(t);
+  }, [done]);
+  const within = 0.35 + 0.55 * (1 - Math.exp(-stepAge / 25));
+  const target = done ? 1 : Math.min(0.97, (idx + within) / steps.length);
   const progress = useEased(target, done ? 700 : 1300);
   const pct = Math.round(progress * 100);
 
@@ -124,8 +145,12 @@ export function BuildSequence({ mode, steps, current, done, chips, log, onFinish
     };
   }, [done, onFinished]);
 
-  // Log lines for every step reached so far; the newest stay visible.
-  const lines = steps.slice(0, done ? steps.length : idx + 1).flatMap((s) => (log[s.key] ?? []).map((l) => ({ key: `${s.key}:${l}`, l })));
+  // Log lines for every step reached so far; the current step's lines arrive one at a time.
+  const lines = steps.slice(0, done ? steps.length : idx + 1).flatMap((s, i) => {
+    const all = log[s.key] ?? [];
+    const n = done || i < idx ? all.length : Math.min(all.length, 1 + Math.floor(stepAge / 2.4));
+    return all.slice(0, n).map((l) => ({ key: `${s.key}:${l}`, l }));
+  });
   const shown = [...lines, ...(done ? [{ key: "done", l: "STATUS › ALL SYSTEMS NOMINAL" }] : [])].slice(-6);
   const label = done ? "Proposal ready" : steps[idx]?.label ?? "Initializing";
 
@@ -156,7 +181,7 @@ export function BuildSequence({ mode, steps, current, done, chips, log, onFinish
             {pct}
             <span className="text-[20px] text-white/50">%</span>
           </div>
-          <div className="hud-mono mt-1 text-[9px] text-white/50">{done ? "COMPLETE" : `STEP ${idx + 1}/${steps.length}`}</div>
+          <div className="hud-mono mt-1 text-[9px] text-white/50">{done ? "COMPLETE" : `STEP ${idx + 1}/${steps.length} · T+${clock(elapsed)}`}</div>
         </div>
       </div>
 

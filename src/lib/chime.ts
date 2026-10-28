@@ -596,6 +596,12 @@ export function playBuildStart() {
   unlockCue("buildStep");
   unlockCue("buildDone");
 }
+/** Unlock the step/completion sounds inside a tap without playing the power-up (for revisions). */
+export function unlockBuildSounds() {
+  if (!introSoundEnabled()) return;
+  unlockCue("buildStep");
+  unlockCue("buildDone");
+}
 export function playBuildStep() {
   if (introSoundEnabled()) void playCue("buildStep");
 }

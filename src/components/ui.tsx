@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { ChevronLeft, Loader2, Minus, Plus, X } from "lucide-react";
+import { ChevronLeft, Minus, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { Provenance } from "@/lib/types";
@@ -17,7 +17,7 @@ export function Wordmark({ className, size = 22 }: { className?: string; size?: 
 
 export function PageHeader({ title, eyebrow, back, actions, children, vtTarget }: { title: ReactNode; eyebrow?: ReactNode; back?: string; actions?: ReactNode; children?: ReactNode; vtTarget?: boolean }) {
   return (
-    <header className="pt-safe sticky top-0 z-30 border-b hairline bg-bg/85 backdrop-blur-xl">
+    <header className="hud-header pt-safe sticky top-0 z-30 border-b hairline bg-bg/85 backdrop-blur-xl">
       <div className="px-safe mx-auto flex max-w-6xl items-center gap-3 py-3">
         {back && (
           <Link href={back} className="-ml-2 rounded-full p-1.5 text-ink2 hover:bg-surface2 hover:text-ink" aria-label="Back">
@@ -25,8 +25,8 @@ export function PageHeader({ title, eyebrow, back, actions, children, vtTarget }
           </Link>
         )}
         <div className="min-w-0 flex-1" {...(vtTarget ? { "data-vt-target": "" } : {})}>
-          {eyebrow && <div className="eyebrow mb-0.5 truncate">{eyebrow}</div>}
-          <h1 className="truncate text-[19px] font-semibold tracking-tight">{title}</h1>
+          {eyebrow && <div className="hud-eyebrow mb-0.5 truncate">{eyebrow}</div>}
+          <h1 className="hud-title truncate text-[19px] font-semibold tracking-tight">{title}</h1>
         </div>
         {actions && <div className="flex shrink-0 items-center gap-1.5">{actions}</div>}
       </div>
@@ -39,14 +39,15 @@ export function Page({ children, className }: { children: ReactNode; className?:
   return <main className={clsx("px-safe mx-auto max-w-6xl pb-40 pt-4 lg:pb-16", className)}>{children}</main>;
 }
 
-export function Card({ children, className, pad = true, as: As = "div" }: { children: ReactNode; className?: string; pad?: boolean; as?: "div" | "section" }) {
-  return <As className={clsx("card", pad && "card-pad", className)}>{children}</As>;
+/** `hud` adds the corner brackets used on primary panels. */
+export function Card({ children, className, pad = true, as: As = "div", hud }: { children: ReactNode; className?: string; pad?: boolean; as?: "div" | "section"; hud?: boolean }) {
+  return <As className={clsx("card", hud && "card-hud", pad && "card-pad", className)}>{children}</As>;
 }
 
 export function SectionTitle({ children, action, className }: { children: ReactNode; action?: ReactNode; className?: string }) {
   return (
     <div className={clsx("mb-2.5 mt-6 flex items-end justify-between gap-3 first:mt-0", className)}>
-      <h2 className="eyebrow">{children}</h2>
+      <h2 className="hud-section">{children}</h2>
       {action}
     </div>
   );
@@ -277,8 +278,18 @@ export function Stat({ label, value, sub, accent, className }: { label: ReactNod
   );
 }
 
+/** HUD loader: two counter-rotating arcs (used everywhere something is working). */
 export function Spinner({ size = 16, className }: { size?: number; className?: string }) {
-  return <Loader2 size={size} className={clsx("animate-spin", className)} />;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={clsx("shrink-0", className)} aria-label="Working" role="img">
+      <g className="hud-spin-a" style={{ transformOrigin: "12px 12px" }}>
+        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeOpacity="0.9" strokeWidth="2" strokeLinecap="round" strokeDasharray="16 47" />
+      </g>
+      <g className="hud-spin-b" style={{ transformOrigin: "12px 12px" }}>
+        <circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" strokeOpacity="0.5" strokeWidth="1.6" strokeLinecap="round" strokeDasharray="8 30" />
+      </g>
+    </svg>
+  );
 }
 
 export function EmptyState({ icon, title, body, action }: { icon?: ReactNode; title: ReactNode; body?: ReactNode; action?: ReactNode }) {

@@ -160,7 +160,7 @@ export default function ImportPage() {
     <>
       <PageHeader title="Import proposal" eyebrow="PDF · Word · text" back="/library" />
       <Page>
-        <Card className="space-y-3">
+        <Card hud className="space-y-3">
           <label className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 border-dashed hairline-strong px-4 py-8 text-center transition hover:bg-surface2/50">
             {busy === "read" ? <Spinner size={26} /> : <FileUp size={28} className="text-red" />}
             <span className="text-[15px] font-semibold">{file ? file.name : "Choose a completed proposal"}</span>

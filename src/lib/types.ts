@@ -366,6 +366,27 @@ export interface Story {
   updatedAt: ISODate;
 }
 
+/** One turn of the proposal conversation. */
+export interface ChatTurn {
+  id: ID;
+  role: "user" | "assistant";
+  text: string;
+  at: ISODate;
+  attachments?: { name: string; kind: "image" | "pdf" | "text" }[];
+  /** Assistant turns: what changed, what was assumed, what still needs Anthony's input. */
+  changes?: string[];
+  assumptions?: string[];
+  /** Amounts or conversions the app refused because Anthony didn't state them. */
+  guards?: string[];
+  questions?: string[];
+  /** Core-information check after this turn. */
+  core?: { item: string; ok: boolean; note?: string }[];
+  /** Version saved before this turn's changes (for undo). */
+  beforeVersionId?: ID | null;
+  mode?: "ai" | "offline";
+  error?: boolean;
+}
+
 /** Customer PDF length: same information at every length, condensed to fit. */
 export type DocLength = "one_page" | "two_page" | "short" | "full";
 
@@ -474,6 +495,8 @@ export interface Proposal {
   rfpRequirements?: RfpRequirement[];
   /** Story content written by Claude; when absent the story is composed from the proposal's sections and data. */
   story?: Story | null;
+  /** The proposal conversation (requests to and replies from the proposal engine). */
+  chat?: ChatTurn[];
   templateUsed: string | null;
   importedFrom: { fileName: string; docId: ID | null; mode: ImportMode } | null;
   wizardStep: number;

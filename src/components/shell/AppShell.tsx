@@ -16,7 +16,7 @@ import { Intro } from "./Intro";
 const NAV = [
   { href: "/", label: "Dashboard", icon: Home },
   { href: "/estimates", label: "Estimates", icon: Calculator },
-  { href: "/quick", label: "New", icon: Plus, primary: true },
+  { href: "/compose", label: "New", icon: Plus, primary: true },
   { href: "/library", label: "Library", icon: FolderOpen },
   { href: "/knowledge", label: "Knowledge", icon: BookOpen },
 ];
@@ -105,13 +105,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <ToastProvider>
       <Intro ready={ready} error={error} onExit={onIntroExit} />
+      {/* Faint HUD grid behind every screen. */}
+      <div className="hud-backdrop pointer-events-none fixed inset-0 -z-10" aria-hidden />
       <div className={clsx("lg:pl-[232px]", entered && "app-enter")}>
         <aside className="pt-safe fixed inset-y-0 left-0 z-40 hidden w-[232px] flex-col border-r hairline bg-surface/60 px-3 pb-4 backdrop-blur-xl lg:flex">
           <div className="px-3 pb-6 pt-6">
             <Wordmark size={28} />
             <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-ink3">Proposal Studio</div>
           </div>
-          <Link href="/quick" className="btn-primary mb-4 w-full">
+          <Link href="/compose" className="btn-primary mb-4 w-full">
             <Plus size={18} /> New Proposal
           </Link>
           <nav className="flex flex-col gap-0.5">
@@ -143,7 +145,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         ) : null}
       </div>
-      <nav className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t hairline bg-bg/85 backdrop-blur-xl lg:hidden" aria-label="Primary">
+      {/* The chat has its own dock at the bottom, like a messaging app. */}
+      <nav className={clsx("pb-safe fixed inset-x-0 bottom-0 z-40 border-t hairline bg-bg/85 backdrop-blur-xl lg:hidden", path.startsWith("/compose") && "hidden")} aria-label="Primary">
         <div className="mx-auto flex max-w-xl items-stretch justify-around px-2 pt-1.5">
           {NAV.map((n) =>
             n.primary ? (
@@ -153,7 +156,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </span>
               </Link>
             ) : (
-              <Link key={n.href} href={n.href} className={clsx("flex min-w-[58px] flex-col items-center gap-0.5 px-1 py-1 text-[10.5px] font-medium", active(path, n.href) ? "text-ink" : "text-ink3")}>
+              <Link key={n.href} href={n.href} className={clsx("relative flex min-w-[58px] flex-col items-center gap-0.5 px-1 py-1 text-[10.5px] font-medium", active(path, n.href) ? "text-ink" : "text-ink3")}>
+                {active(path, n.href) && <span key={path} className="hud-tab-line absolute -top-1.5 h-[2px] w-6 rounded-full bg-red" />}
                 <n.icon key={active(path, n.href) ? "on" : "off"} size={22} className={active(path, n.href) ? "tab-pop text-red" : "transition-colors"} strokeWidth={active(path, n.href) ? 2.2 : 1.8} />
                 {n.label}
               </Link>

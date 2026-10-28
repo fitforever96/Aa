@@ -122,7 +122,7 @@ export function StepReview(props: StepProps) {
             if (!shown.length) return null;
             return (
               <Card key={g} pad={false} className="overflow-hidden">
-                <div className="border-b hairline px-4 py-2.5 text-[12px] font-semibold uppercase tracking-wider text-ink3">{GROUP_LABEL[g]}</div>
+                <div className="hud-eyebrow border-b hairline px-4 py-2.5">{GROUP_LABEL[g]}</div>
                 <div className="divide-hair">
                   {shown.map((c) => (
                     <div key={c.id} className="flex gap-2.5 px-4 py-2.5">

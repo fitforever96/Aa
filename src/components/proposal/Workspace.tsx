@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import clsx from "clsx";
-import { Check, ChevronLeft, ChevronRight, Cloud, CloudOff, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { Check, ChevronLeft, ChevronRight, Cloud, CloudOff, MessageSquare, Sparkles } from "lucide-react";
 import { useProposal } from "@/lib/useProposal";
 import { Badge, EmptyState, Page, PageHeader, Spinner } from "@/components/ui";
 import { STATUS_LABEL, STATUS_TONE } from "@/lib/actions";
@@ -98,14 +99,19 @@ export function Workspace() {
         }
         title={proposal.customer.name || proposal.property.name || proposal.title}
         actions={
-          <button className="btn-secondary btn-sm" onClick={() => setAssistant(true)}>
-            <Sparkles size={15} className="text-red" /> <span className="hidden sm:inline">Assistant</span>
-          </button>
+          <>
+            <Link href={`/compose?id=${proposal.id}`} className="btn-secondary btn-sm" aria-label="Open in the proposal engine chat">
+              <MessageSquare size={15} className="text-red" /> <span className="hidden sm:inline">Chat</span>
+            </Link>
+            <button className="btn-secondary btn-sm" onClick={() => setAssistant(true)} aria-label="Assistant">
+              <Sparkles size={15} className="text-red" /> <span className="hidden sm:inline">Assistant</span>
+            </button>
+          </>
         }
       >
         <nav className="scrollbar-none px-safe mx-auto flex max-w-6xl gap-1 overflow-x-auto pb-2.5" aria-label="Proposal steps">
           {STEPS.map((s, i) => (
-            <button key={s} onClick={() => goStep(i)} className={clsx("flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold transition", i === step ? "bg-red text-white" : i < step ? "text-ink2 hover:bg-surface2" : "text-ink3 hover:bg-surface2")}>
+            <button key={s} onClick={() => goStep(i)} className={clsx("flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold transition", i === step ? "step-on bg-red text-white" : i < step ? "text-ink2 hover:bg-surface2" : "text-ink3 hover:bg-surface2")}>
               <span className={clsx("flex h-[18px] w-[18px] items-center justify-center rounded-full text-[10px]", i === step ? "bg-white/25" : "bg-surface3")}>{i < step ? <Check size={11} /> : i + 1}</span>
               {s}
             </button>

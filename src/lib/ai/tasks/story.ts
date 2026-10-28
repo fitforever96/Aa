@@ -17,7 +17,7 @@ export const Body = z.object({
 
 const P = z.union([z.literal(1), z.literal(2), z.literal(3)]);
 const Item = z.object({ title: z.string(), body: z.string() });
-const BlockOut = z.union([
+export const BlockOut = z.union([
   z.object({ kind: z.literal("heading"), priority: P, title: z.string(), accent: z.string(), lead: z.string() }),
   z.object({ kind: z.literal("label"), priority: P, text: z.string() }),
   z.object({ kind: z.literal("paragraph"), priority: P, text: z.string() }),
@@ -44,7 +44,7 @@ const BUDGET: Record<z.infer<typeof Body>["length"], string> = {
   full: "a complete proposal of about four to six dense pages: about 20 to 30 blocks, including depth on biology, method and evidence where the facts support it.",
 };
 
-const SYSTEM = `You write commercial pest-management proposals for Anthony Acosta, Senior Account Manager, Orkin Commercial. Your output is a structured "story" rendered as a dense, portrait, designed PDF.
+export const STORY_SYSTEM = `You write commercial pest-management proposals for Anthony Acosta, Senior Account Manager, Orkin Commercial. Your output is a structured "story" rendered as a dense, portrait, designed PDF.
 
 HOW ANTHONY'S BEST PROPOSALS WORK (follow this):
 - They argue for a specific response at a specific building. Open with an assessment that classifies the condition from the facts given (where activity is, how it moves through this building type).
@@ -77,5 +77,5 @@ export async function run(ctx: AICtx, body: z.infer<typeof Body>): Promise<Story
   ]
     .filter(Boolean)
     .join("\n\n");
-  return callJSON(ctx, { system: `${SYSTEM}\n\n${writingStandard(ctx.memory)}`, content, schema: StoryOut, effort: "medium", maxTokens: 24000 });
+  return callJSON(ctx, { system: `${STORY_SYSTEM}\n\n${writingStandard(ctx.memory)}`, content, schema: StoryOut, effort: "medium", maxTokens: 24000 });
 }

@@ -57,7 +57,7 @@ export async function quickBuild(brief: string, useAI: boolean, onStep: (s: Quic
     onStep("write");
     try {
       // The portrait story is what the customer sees; the classic layout uses rewritten sections.
-      if ((p.document.options.layout ?? "story") === "story") p = await aiStory(p, settings);
+      if ((p.document.options.layout ?? "story") === "story") p = await aiStory(p, settings, brief.trim().slice(0, 2000));
       else p = (await aiRewrite(p, settings, { instruction: WRITE_INSTRUCTION + LENGTH_NOTE[length], target: "all", allowContractual: false })).proposal;
       await saveProposal(p);
     } catch (e) {

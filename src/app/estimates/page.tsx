@@ -41,7 +41,7 @@ export default function Estimates() {
       <PageHeader title="Estimates" eyebrow="Labor & pricing" />
       <Page>
         <SectionTitle>Device labor calculator</SectionTitle>
-        <Card className="space-y-4">
+        <Card hud className="space-y-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <NumberField label="Tin Cats" value={tin} stepper onChange={(v) => setTin(v ?? 0)} hint={`${a?.tinCatServiceMinutes ?? 1} min each · confirmed`} />
             <NumberField label="Exterior bait stations" value={st} stepper onChange={(v) => setSt(v ?? 0)} hint={`${a?.baitStationServiceMinutes ?? 2} min each · confirmed`} />

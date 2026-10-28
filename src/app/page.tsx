@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
-import { ArrowRight, Calculator, FileUp, Plus, Settings as Cog, Sparkles } from "lucide-react";
+import { ArrowUp, Calculator, FileUp, Plus, Settings as Cog, Sparkles } from "lucide-react";
 import { db } from "@/lib/db";
-import { relTime, useSettings } from "@/lib/client";
+import { relTime, useAIStatus, useOnline, useSettings } from "@/lib/client";
 import { Badge, Card, EmptyState, Page, SectionTitle, Wordmark } from "@/components/ui";
 import { STATUS_LABEL, STATUS_TONE, createProposal } from "@/lib/actions";
 import { STARTER_TEMPLATES } from "@/lib/templates";
@@ -16,6 +16,7 @@ import { frequencyLabel } from "@/lib/engine/frequency";
 import { useToast } from "@/components/shell/Toast";
 import { openWithTransition } from "@/lib/motion";
 import { UnlockPrivateData } from "@/components/UnlockPrivateData";
+import { playBuildStart, prepareBuildSounds } from "@/lib/chime";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -65,16 +66,7 @@ export default function Dashboard() {
           </h1>
         </div>
 
-        <Link href="/quick" className="cta-sheen group mt-5 flex w-full items-center gap-4 overflow-hidden rounded-3xl bg-red p-5 text-left text-white shadow-xl shadow-red/20 transition active:scale-[0.99]">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15">
-            <Sparkles size={26} strokeWidth={2.2} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block font-display text-[22px] font-bold uppercase leading-tight tracking-wide">Build a Proposal</span>
-            <span className="block text-[13px] text-white/80">Say the address, pest and price. I’ll do the rest.</span>
-          </span>
-          <ArrowRight className="shrink-0 transition group-hover:translate-x-1" />
-        </Link>
+        <CommandBar />
 
         <div className="stagger mt-3 grid grid-cols-3 gap-2.5">
           <button onClick={() => start()} className="card press flex flex-col items-start gap-2 p-3.5 text-left">
@@ -119,10 +111,11 @@ export default function Dashboard() {
             return (
               <Link
                 key={p.id}
-                href={`/proposal?id=${p.id}`}
+                href={p.chat?.length ? `/compose?id=${p.id}` : `/proposal?id=${p.id}`}
                 onClick={(e) => {
                   e.preventDefault();
-                  openWithTransition(router.push, `/proposal?id=${p.id}`, e.currentTarget);
+                  // Proposals made in the chat reopen in the chat; the rest in the editor.
+                  openWithTransition(router.push, p.chat?.length ? `/compose?id=${p.id}` : `/proposal?id=${p.id}`, e.currentTarget);
                 }}
                 className="row-press flex items-center gap-3 px-4 py-3.5 hover:bg-surface2/60"
               >
@@ -159,5 +152,67 @@ export default function Dashboard() {
         </Card>
       </Page>
     </>
+  );
+}
+
+/** The main way in: ask for a proposal in plain words; the proposal engine builds it right away. */
+function CommandBar() {
+  const router = useRouter();
+  const settings = useSettings();
+  const ai = useAIStatus();
+  const online = useOnline();
+  const [q, setQ] = useState("");
+  const linked = !!ai?.configured && !!settings?.ai.consent && online;
+  // Ready the build sounds after the intro so the tap can play them instantly.
+  useEffect(() => {
+    const t = setTimeout(prepareBuildSounds, 5500);
+    return () => clearTimeout(t);
+  }, []);
+  const go = () => {
+    const text = q.trim();
+    if (!text) return router.push("/compose");
+    playBuildStart();
+    router.push(`/compose?q=${encodeURIComponent(text)}&go=1`);
+  };
+  return (
+    <div className="mt-5">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          go();
+        }}
+        className="card card-hud dock-panel animate-rise flex items-end gap-1.5 p-1.5"
+      >
+        <span className="mb-[11px] ml-2.5 shrink-0 text-red">
+          <Sparkles size={19} />
+        </span>
+        <textarea
+          rows={2}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey && window.matchMedia("(pointer: fine)").matches) {
+              e.preventDefault();
+              go();
+            }
+          }}
+          placeholder="What do you need? A proposal, a price, findings to enhance…"
+          className="min-h-[52px] flex-1 resize-none bg-transparent px-1 py-2.5 text-[16px] leading-[1.35] text-ink outline-none placeholder:text-ink3"
+          aria-label="Describe the proposal you need"
+        />
+        <button type="submit" data-silent className={q.trim() ? "send-ready flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red text-white shadow-lg shadow-red/25" : "flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface3 text-ink2"} aria-label={q.trim() ? "Build it" : "Open the proposal engine"}>
+          <ArrowUp size={21} strokeWidth={2.4} />
+        </button>
+      </form>
+      <div className="mt-2 flex items-center justify-between px-1">
+        <span className="hud-mono flex items-center gap-1.5 text-[10px] uppercase text-ink3">
+          <span className={linked ? "h-1.5 w-1.5 rounded-full bg-ok" : "h-1.5 w-1.5 rounded-full bg-ink3"} />
+          Proposal engine · {linked ? "Claude linked" : "Local"}
+        </span>
+        <Link href="/compose" className="text-[12.5px] font-medium text-red">
+          Attach photos or files
+        </Link>
+      </div>
+    </div>
   );
 }

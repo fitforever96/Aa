@@ -54,7 +54,7 @@ function NewProposalInner() {
       <PageHeader title="New Proposal" eyebrow="Start" back="/" />
       <Page>
         <SectionTitle>Describe the job</SectionTitle>
-        <Card>
+        <Card hud>
           <VoiceInput
             value={text}
             onChange={(v) => {

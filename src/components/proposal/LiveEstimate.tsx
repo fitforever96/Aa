@@ -50,7 +50,7 @@ export function LiveEstimateBar({ r, program }: { r: ProgramPricingResult; progr
           </Collapse>
           <button className="flex w-full items-center gap-3 px-4 py-2.5" onClick={() => setOpen(!open)} aria-expanded={open}>
             <div className="min-w-0 flex-1 text-left">
-              <div className="text-[11px] font-medium uppercase tracking-wider text-ink3">{r.recurring ? (r.recurring.overrideCents != null ? "Your price / visit" : "Suggested / visit") : "One-time"}</div>
+              <div className="hud-eyebrow">{r.recurring ? (r.recurring.overrideCents != null ? "Your price / visit" : "Suggested / visit") : "One-time"}</div>
               <div className="num font-display text-[22px] font-bold leading-tight">
                 <Rolling value={price} format={(c) => formatMoney(c)} />
               </div>

@@ -50,7 +50,7 @@ export const DraftOut = z.object({
 });
 export type DraftOutput = z.infer<typeof DraftOut> & { sources: { url: string; title: string }[]; searches: number };
 
-const LOOKUP = `You help Anthony Acosta (Senior Account Manager, Orkin Commercial, Detroit) prepare a commercial pest-management proposal from a short note.
+export const LOOKUP = `You help Anthony Acosta (Senior Account Manager, Orkin Commercial, Detroit) prepare a commercial pest-management proposal from a short note.
 Use web search to:
 1. Identify what is at the address: the business or property name, what kind of facility it is, approximate building size (sq ft), number of buildings, floors or apartment count. Prefer public records, the business's own site, listings and maps data.
 2. Look up practical, authoritative guidance (orkin.com, EPA, university extension) on the pest issue for this kind of facility.

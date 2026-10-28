@@ -523,3 +523,141 @@ html[data-vt] .page-enter { animation: none; }
 /* Data chips pan slowly when they overflow the row. */
 .build-marquee { animation: build-marquee 9s ease-in-out 1.2s infinite alternate; }
 @keyframes build-marquee { 0%, 15% { transform: translateX(0); } 85%, 100% { transform: translateX(min(0px, calc(-100% + min(28rem, 100vw - 2.5rem)))); } }
+
+/* ---------- HUD language across the app (restrained) ---------- */
+body { background-color: rgb(var(--bg)); }
+.hud-backdrop {
+  background-image:
+    radial-gradient(ellipse at 50% -10%, rgba(228, 0, 43, 0.07), transparent 55%),
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: 100% 100%, 32px 32px, 32px 32px;
+  mask-image: linear-gradient(180deg, black, rgba(0, 0, 0, 0.35) 70%, transparent);
+  -webkit-mask-image: linear-gradient(180deg, black, rgba(0, 0, 0, 0.35) 70%, transparent);
+}
+/* Page header: mono eyebrow and a red line that sweeps across once on arrival. */
+.hud-header { position: sticky; }
+.hud-header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(228, 0, 43, 0.9), transparent);
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: hud-sweep-line 1.1s cubic-bezier(0.65, 0, 0.35, 1) 0.1s forwards;
+  opacity: 0.8;
+}
+@keyframes hud-sweep-line { 0% { transform: scaleX(0); opacity: 0.9; } 70% { transform: scaleX(1); opacity: 0.8; } 100% { transform: scaleX(1); opacity: 0.25; } }
+.hud-eyebrow {
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(var(--ink-3));
+}
+.hud-title { animation: hud-title 0.5s var(--ease-out) both; }
+@keyframes hud-title { 0% { opacity: 0; transform: translateY(3px); letter-spacing: 0.02em; } 100% { opacity: 1; transform: none; } }
+/* Section titles: red tick, mono label, hairline that draws in. */
+.hud-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(var(--ink-3));
+}
+.hud-section::before { content: ""; width: 10px; height: 2px; border-radius: 1px; background: rgb(var(--red)); box-shadow: 0 0 6px rgba(228, 0, 43, 0.6); }
+/* Primary panels: corner brackets. */
+.card-hud { position: relative; }
+.card-hud::before,
+.card-hud::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: rgba(228, 0, 43, 0.75);
+  pointer-events: none;
+  animation: hud-bracket 0.6s var(--ease-out) both;
+}
+.card-hud::before { top: -1px; left: -1px; border-top: 1.5px solid; border-left: 1.5px solid; border-top-left-radius: 14px; }
+.card-hud::after { bottom: -1px; right: -1px; border-bottom: 1.5px solid; border-right: 1.5px solid; border-bottom-right-radius: 14px; }
+@keyframes hud-bracket { 0% { opacity: 0; transform: scale(1.6); } 100% { opacity: 1; transform: none; } }
+/* Loader arcs. */
+.hud-spin-a { animation: hud-spin 0.9s linear infinite; }
+.hud-spin-b { animation: hud-spin 1.4s linear infinite reverse; }
+/* Toasts: slide in with a status bar on the left. */
+.hud-toast { animation: hud-toast 0.42s var(--ease-out) both; }
+.hud-toast::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+@keyframes hud-toast { 0% { opacity: 0; transform: translateY(-10px) scale(0.98); filter: blur(3px); } 100% { opacity: 1; transform: none; filter: blur(0); } }
+/* Bottom menu: the active tab gets a glowing line that grows in. */
+.hud-tab-line { box-shadow: 0 0 8px rgba(228, 0, 43, 0.9); animation: hud-tab-line 0.45s var(--ease-out) both; }
+@keyframes hud-tab-line { 0% { transform: scaleX(0); opacity: 0; } 100% { transform: none; opacity: 1; } }
+
+/* ---------- Proposal engine (chat) ---------- */
+.msg-in { animation: msg-in 0.5s var(--ease-out) both; }
+@keyframes msg-in { 0% { opacity: 0; transform: translateY(8px); filter: blur(4px); } 100% { opacity: 1; transform: none; filter: blur(0); } }
+.msg-user { animation: msg-user 0.38s var(--ease-out) both; transform-origin: bottom right; }
+@keyframes msg-user { 0% { opacity: 0; transform: translateY(6px) scale(0.97); } 100% { opacity: 1; transform: none; } }
+/* Core-information readout fills left to right. */
+.core-seg { animation: core-seg 0.4s var(--ease-out) both; transform-origin: left; }
+@keyframes core-seg { 0% { opacity: 0; transform: scaleX(0); } 100% { opacity: 1; transform: none; } }
+/* Working indicator: a light that travels along a hairline. */
+.work-bar { animation: work-bar 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+@keyframes work-bar { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+/* Document pages settle in; on a fresh render a scan passes over each page once. */
+.doc-page { animation: doc-page 0.6s var(--ease-out) both; }
+@keyframes doc-page { 0% { opacity: 0; transform: translateY(10px) scale(0.98); } 100% { opacity: 1; transform: none; } }
+.doc-scan::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 28%;
+  background: linear-gradient(180deg, transparent, rgba(228, 0, 43, 0.16) 70%, rgba(228, 0, 43, 0.5) 98%, transparent);
+  animation: doc-scan 1.2s cubic-bezier(0.65, 0, 0.35, 1) 0.25s both;
+  pointer-events: none;
+}
+@keyframes doc-scan { 0% { transform: translateY(-100%); opacity: 0; } 12% { opacity: 1; } 100% { transform: translateY(360%); opacity: 0; } }
+.doc-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.06) 50%, transparent 70%);
+  animation: doc-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes doc-shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+.viewer-in { animation: hud-fade-in 0.3s ease both; }
+/* Dock: glass panel; focus lights the edge red. */
+.dock-fade { background: linear-gradient(180deg, transparent, rgb(var(--bg)) 42%); }
+.dock-panel { box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5); transition: border-color 0.3s ease, box-shadow 0.3s ease; }
+.dock-panel:focus-within { border-color: rgba(228, 0, 43, 0.45); box-shadow: 0 0 0 3px rgba(228, 0, 43, 0.1), 0 10px 40px rgba(0, 0, 0, 0.5); }
+.dock-busy { position: relative; overflow: hidden; }
+.dock-busy::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(228, 0, 43, 0.9), transparent);
+  animation: work-bar 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  width: 40%;
+}
+.send-ready { box-shadow: 0 0 0 0 rgba(228, 0, 43, 0.5); animation: send-ready 0.4s var(--ease-spring) both; }
+@keyframes send-ready { 0% { transform: scale(0.8); } 100% { transform: none; } }
+.mic-live { animation: mic-live 1.4s ease-in-out infinite; }
+@keyframes mic-live { 0%, 100% { box-shadow: 0 0 0 0 rgba(228, 0, 43, 0.35); } 50% { box-shadow: 0 0 0 6px rgba(228, 0, 43, 0); } }
+/* Idle reactor core on the empty chat. */
+.engine-core { box-shadow: 0 0 24px rgba(228, 0, 43, 0.55), inset 0 0 10px rgba(255, 255, 255, 0.25); animation: engine-core 3.2s ease-in-out infinite; }
+@keyframes engine-core { 0%, 100% { transform: scale(0.94); opacity: 0.9; } 50% { transform: scale(1); opacity: 1; } }
+.menu-up { animation: menu-up 0.22s var(--ease-out) both; transform-origin: bottom left; }
+@keyframes menu-up { 0% { opacity: 0; transform: translateY(6px) scale(0.97); } 100% { opacity: 1; transform: none; } }
+/* Editor: the current step pill glows and its number locks in. */
+.step-on { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset, 0 0 14px rgba(228, 0, 43, 0.45); animation: step-on 0.4s var(--ease-out) both; }
+@keyframes step-on { 0% { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset, 0 0 0 rgba(228, 0, 43, 0); } 100% { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset, 0 0 14px rgba(228, 0, 43, 0.45); } }

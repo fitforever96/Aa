@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { Mic, Square } from "lucide-react";
 
-type Rec = {
+export type Rec = {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
@@ -15,7 +15,7 @@ type Rec = {
   onend: (() => void) | null;
 };
 
-function getRecognition(): (new () => Rec) | null {
+export function getRecognition(): (new () => Rec) | null {
   if (typeof window === "undefined") return null;
   const w = window as unknown as { SpeechRecognition?: new () => Rec; webkitSpeechRecognition?: new () => Rec };
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;

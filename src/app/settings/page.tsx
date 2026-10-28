@@ -22,6 +22,7 @@ export default function SettingsPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const version = useLiveQuery(async () => (s ? db().assumptionVersions.get(s.activeAssumptionsVersionId) : undefined), [s?.activeAssumptionsVersionId]);
   const counts = useLiveQuery(async () => ({ proposals: await db().proposals.count(), docs: await db().knowledge.count(), assets: await db().assets.count() }), []);
+  const memoryWords = useLiveQuery(async () => (await db().knowledge.get("doc_master_memory"))?.text?.trim().split(/\s+/).length ?? 0, []);
   if (!s) return null;
   const save = (fn: (x: Settings) => void) => {
     const n = structuredClone(s);
@@ -126,9 +127,16 @@ export default function SettingsPage() {
           </div>
         </Card>
 
+        <div id="private" />
         <SectionTitle>Writing standards</SectionTitle>
-        <Card className="space-y-2 text-[13.5px] leading-relaxed text-ink2">
-          <p><b className="text-ink">Master memory applied.</b> Your Orkin proposal-development master memory governs AI writing, recommendations and command interpretation when the server is configured with it (MASTER_MEMORY environment variable; never sent to the browser). Its rules are also built into the offline writer and quality control:</p>
+        <Card hud className="space-y-2 text-[13.5px] leading-relaxed text-ink2">
+          <div className="flex items-center justify-between gap-3 border-b hairline pb-2.5">
+            <span className="hud-mono text-[10.5px] uppercase text-ink3">Master memory</span>
+            {memoryWords ? <Badge tone="ok">Loaded · {memoryWords.toLocaleString()} words</Badge> : <Badge tone="warn">Not loaded</Badge>}
+          </div>
+          <p>
+            <b className="text-ink">{memoryWords ? "Your master memory governs the proposal engine." : "Unlock your private data to load your master memory."}</b> {ai?.mode === "server" ? "With a server configured, the server supplies it to Claude (MASTER_MEMORY environment variable)." : "When it is loaded on this device, it is sent to Claude as the governing standard with every AI request you make (proposal engine, writing, recommendations and commands)."} Its rules are also built into the offline writer and quality control:
+          </p>
           <ul className="list-inside list-disc space-y-0.5 text-[13px] text-ink3">
             <li>No hour-specific response promises (the rejected 24-hour on-site language is blocked everywhere)</li>
             <li>No eradication, compliance, refund or unlimited-service promises; no National Accounts claims for multistate work</li>
