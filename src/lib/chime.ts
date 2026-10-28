@@ -282,117 +282,149 @@ function composeIntro(ctx: Ctx) {
   fm(ctx, bus, hz(86), 4.0, 1.3, { ratio: 2.0, index: 0.4, gain: 0.02, attack: 0.3 });
 }
 
+// ───────────────────────── Build sounds: sleek, expensive, lots of space ─────────────────────────
+
 /**
- * Mechanical "plate lock": a short resonant noise tick with a little low body. Fixed pitch,
- * no glide. Strings of these read as armor plates and servos seating into place.
+ * Premium chain for the build cues: clean low end, polished highs, a stereo ping-pong delay
+ * and a long, smooth, pre-delayed reverb. Returns the bus voices connect to.
  */
-function plate(ctx: Ctx, out: AudioNode, at: number, gain: number, pitch: number, pan = 0) {
-  const n = ctx.createBufferSource();
-  n.buffer = noiseBuffer(ctx, 0.05);
-  const bp = ctx.createBiquadFilter();
-  bp.type = "bandpass";
-  bp.frequency.value = pitch;
-  bp.Q.value = 7;
-  const g = env(ctx, at, 0.002, gain, 0.0001, 0.045);
-  const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
-  if (p) {
-    p.pan.value = pan;
-    n.connect(bp).connect(g).connect(p).connect(out);
-  } else n.connect(bp).connect(g).connect(out);
-  n.start(at);
-  const body = ctx.createOscillator();
-  body.type = "sine";
-  body.frequency.value = 150;
-  const bg = env(ctx, at, 0.003, gain * 0.6, 0.0001, 0.06);
-  body.connect(bg).connect(out);
-  body.start(at);
-  body.stop(at + 0.08);
+function luxe(ctx: Ctx, gain: number, opts: { wet?: number; verb?: number; echo?: number; echoTime?: number } = {}) {
+  const { wet = 0.55, verb = 4.6, echo = 0.22, echoTime = 0.19 } = opts;
+  const master = ctx.createGain();
+  master.gain.value = gain;
+  const hp = ctx.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 28;
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 9000;
+  lp.Q.value = 0.4;
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -22;
+  comp.ratio.value = 2;
+  comp.attack.value = 0.03;
+  comp.release.value = 0.5;
+  master.connect(hp).connect(lp).connect(comp).connect(ctx.destination);
+
+  // Long, smooth reverb with pre-delay.
+  const pre = ctx.createDelay(0.3);
+  pre.delayTime.value = 0.06;
+  const rv = reverb(ctx, verb, 3.8);
+  const rvTone = ctx.createBiquadFilter();
+  rvTone.type = "lowpass";
+  rvTone.frequency.value = 6500;
+  const rvGain = ctx.createGain();
+  rvGain.gain.value = wet;
+  pre.connect(rv).connect(rvTone).connect(rvGain).connect(master);
+
+  // Stereo ping-pong delay (left, right, left...), darkening as it repeats.
+  const merger = ctx.createChannelMerger(2);
+  const dl = ctx.createDelay(1);
+  const dr = ctx.createDelay(1);
+  dl.delayTime.value = echoTime;
+  dr.delayTime.value = echoTime;
+  const fb = ctx.createGain();
+  fb.gain.value = 0.38;
+  const tone = ctx.createBiquadFilter();
+  tone.type = "lowpass";
+  tone.frequency.value = 4200;
+  const echoIn = ctx.createGain();
+  echoIn.gain.value = echo;
+  echoIn.connect(dl);
+  dl.connect(dr);
+  dr.connect(tone).connect(fb).connect(dl);
+  dl.connect(merger, 0, 0);
+  dr.connect(merger, 0, 1);
+  merger.connect(master);
+  merger.connect(pre);
+
+  const bus = ctx.createGain();
+  bus.connect(master);
+  bus.connect(pre);
+  bus.connect(echoIn);
+  return bus;
 }
 
-/** Pneumatic release: a short band of air, fixed band (no sweep). */
-function hiss(ctx: Ctx, out: AudioNode, at: number, dur: number, gain: number, band = 2200) {
+/** Crystalline glass tone: sine plus soft FM sheen, slow-ish attack, long natural decay. */
+function glass(ctx: Ctx, out: AudioNode, midi: number, at: number, dur: number, gain: number, pan = 0) {
+  fm(ctx, out, hz(midi), at, dur, { ratio: 3.0, index: 0.35, gain, attack: 0.012, pan });
+  fm(ctx, out, hz(midi + 12), at + 0.004, dur * 0.6, { ratio: 2.0, index: 0.2, gain: gain * 0.28, attack: 0.02, pan: -pan });
+}
+
+/** Soft air swell (fixed band, no sweep): the "breath" before something powers on. */
+function air(ctx: Ctx, out: AudioNode, at: number, dur: number, gain: number, band = 3200) {
   const n = ctx.createBufferSource();
-  n.buffer = noiseBuffer(ctx, dur + 0.05);
+  n.buffer = noiseBuffer(ctx, dur + 0.1);
   const bp = ctx.createBiquadFilter();
   bp.type = "bandpass";
   bp.frequency.value = band;
-  bp.Q.value = 0.8;
+  bp.Q.value = 0.6;
   const g = ctx.createGain();
   g.gain.setValueAtTime(0.0001, at);
-  g.gain.exponentialRampToValueAtTime(gain, at + 0.02);
+  g.gain.exponentialRampToValueAtTime(gain, at + dur * 0.7);
   g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
   n.connect(bp).connect(g).connect(out);
   n.start(at);
-  n.stop(at + dur + 0.05);
+  n.stop(at + dur + 0.1);
 }
 
-/** Steady reactor tone at a fixed pitch (no glide), fading in and holding. */
-function reactor(ctx: Ctx, out: AudioNode, at: number, dur: number, gain: number) {
-  hum(ctx, out, [38, 45], at, dur, gain);
-  const o = ctx.createOscillator();
-  o.type = "sine";
-  o.frequency.value = hz(38);
-  const g = ctx.createGain();
-  g.gain.setValueAtTime(0.0001, at);
-  g.gain.exponentialRampToValueAtTime(gain * 2.4, at + dur * 0.4);
-  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
-  o.connect(g).connect(out);
-  o.start(at);
-  o.stop(at + dur + 0.05);
-}
-
-/** Holographic interface chatter: quiet glassy FM taps on fixed pentatonic pitches. */
-function holo(ctx: Ctx, out: AudioNode, at: number, dur: number, count: number, gain: number) {
-  const scale = [74, 76, 79, 81, 83, 86];
-  for (let i = 0; i < count; i++) {
-    const t = at + (i / count) * dur + Math.random() * 0.04;
-    fm(ctx, out, hz(scale[Math.floor(Math.random() * scale.length)]), t, 0.12, { ratio: 2.0, index: 0.6, gain: gain * (0.6 + Math.random() * 0.4), attack: 0.006, pan: Math.random() * 1.4 - 0.7 });
+/** Deep bloom: a fixed-pitch sub that swells in and out (felt more than heard). */
+function bloom(ctx: Ctx, out: AudioNode, at: number, dur: number, gain: number, midi = 26) {
+  for (const [m, k] of [[midi, 1], [midi + 12, 0.35]] as const) {
+    const o = ctx.createOscillator();
+    o.type = "sine";
+    o.frequency.value = hz(m);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(gain * k, at + dur * 0.45);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+    o.connect(g).connect(out);
+    o.start(at);
+    o.stop(at + dur + 0.05);
   }
+}
+
+/** Precise micro-tick: a tiny, clean, high-but-soft transient (hologram panel registering). */
+function micro(ctx: Ctx, out: AudioNode, at: number, gain: number, pan = 0) {
+  fm(ctx, out, 3520, at, 0.03, { ratio: 1.5, index: 0.3, gain, attack: 0.001, pan });
 }
 
 /**
- * Build start: ~3.4 s, "suit-up". Armor plates seat in an accelerating pattern over a steady
- * reactor tone, with pneumatic releases and holographic interface chatter, ending in a soft lock
- * and a warm chord. No pitch sweeps.
+ * Build start: ~4 s. A soft breath and a deep bloom; glass tones rise as a slow stereo
+ * arpeggio with precise micro-ticks, then a clean "engage": low pulse and a bright glass chord
+ * that echoes left-right into a long reverb. No pitch sweeps.
  */
 function composeBuildStart(ctx: Ctx) {
-  const bus = chain(ctx, 0.55, 0.36, 2.6, 5200);
-  reactor(ctx, bus, 0.0, 3.4, 0.03);
-  let t = 0.08;
-  for (let i = 0; i < 22 && t < 2.2; i++) {
-    plate(ctx, bus, t, 0.09 + (i % 3 === 0 ? 0.05 : 0), [1700, 2300, 1900, 2700][i % 4], i % 2 ? 0.45 : -0.45);
-    t += Math.max(0.045, 0.16 - i * 0.007);
-  }
-  hiss(ctx, bus, 0.55, 0.35, 0.03, 2600);
-  hiss(ctx, bus, 1.35, 0.4, 0.028, 1800);
-  holo(ctx, bus, 0.9, 1.4, 10, 0.02);
-  lock(ctx, bus, 2.35, 0.2, 1500);
-  chord(ctx, bus, [62, 69, 74], 2.4, 1.1, 0.032);
+  const bus = luxe(ctx, 0.6, { wet: 0.55, verb: 4.6, echo: 0.2, echoTime: 0.21 });
+  air(ctx, bus, 0.0, 1.6, 0.03, 3600);
+  bloom(ctx, bus, 0.0, 2.6, 0.32, 26);
+  // D major 9 rising, alternating sides.
+  [62, 66, 69, 73, 76].forEach((m, i) => glass(ctx, bus, m, 0.35 + i * 0.24, 1.6, 0.05, i % 2 ? 0.55 : -0.55));
+  [0.5, 0.74, 0.98, 1.22, 1.46, 1.58, 1.7].forEach((t, i) => micro(ctx, bus, t, 0.012, i % 2 ? 0.7 : -0.7));
+  // Engage.
+  bloom(ctx, bus, 1.85, 1.2, 0.3, 26);
+  [69, 74, 78, 81].forEach((m, i) => glass(ctx, bus, m, 1.9 + i * 0.012, 2.0, 0.045, (i - 1.5) * 0.35));
 }
 
-/** Step locked: ~0.7 s. A pair of plates seating and a soft glassy confirm. */
+/** Step locked: ~1.4 s. One elegant two-note glass ping that echoes across the stereo field. */
 function composeBuildStep(ctx: Ctx) {
-  const bus = chain(ctx, 0.5, 0.36, 1.6, 5000);
-  plate(ctx, bus, 0.0, 0.12, 2100, -0.3);
-  plate(ctx, bus, 0.07, 0.12, 2700, 0.3);
-  fm(ctx, bus, hz(81), 0.12, 0.35, { ratio: 2.0, index: 0.5, gain: 0.03, attack: 0.01 });
-  fm(ctx, bus, hz(86), 0.2, 0.4, { ratio: 2.0, index: 0.4, gain: 0.025, attack: 0.01 });
+  const bus = luxe(ctx, 0.55, { wet: 0.5, verb: 3.4, echo: 0.28, echoTime: 0.17 });
+  glass(ctx, bus, 81, 0.0, 0.9, 0.06, -0.3);
+  glass(ctx, bus, 88, 0.07, 1.0, 0.045, 0.3);
+  bloom(ctx, bus, 0.0, 0.5, 0.12, 38);
 }
 
-/** Build complete: ~3.6 s. Final plates lock, a low thump (fixed pitch), a wide warm chord, quiet holo chatter. */
+/**
+ * Build complete: ~4.5 s. A deep pulse and a lush glass chord (D major 9 over A) that blooms,
+ * a shimmer octave fading in above it, and a delicate rising sparkle, all into a long tail.
+ */
 function composeBuildDone(ctx: Ctx) {
-  const bus = chain(ctx, 0.55, 0.46, 3.8, 5600);
-  [0, 0.06, 0.12].forEach((d, i) => plate(ctx, bus, d, 0.12, [1900, 2400, 3000][i], i - 1));
-  lock(ctx, bus, 0.2, 0.22, 1400);
-  const th = ctx.createOscillator();
-  th.type = "sine";
-  th.frequency.value = 55;
-  const tg = env(ctx, 0.2, 0.01, 0.22, 0.0001, 1.0);
-  th.connect(tg).connect(bus);
-  th.start(0.2);
-  th.stop(1.3);
-  chord(ctx, bus, [62, 66, 69, 73, 78, 81], 0.26, 3.2, 0.05);
-  holo(ctx, bus, 0.6, 1.0, 7, 0.016);
+  const bus = luxe(ctx, 0.6, { wet: 0.62, verb: 5.2, echo: 0.18, echoTime: 0.24 });
+  bloom(ctx, bus, 0.0, 1.8, 0.34, 26);
+  [50, 57, 62, 66, 69, 73, 76].forEach((m, i) => glass(ctx, bus, m, 0.02 + i * 0.035, 3.6, 0.045, (i / 6) * 1.2 - 0.6));
+  // Shimmer octave, slow attack.
+  [81, 85, 88].forEach((m, i) => fm(ctx, bus, hz(m), 0.5 + i * 0.05, 3.0, { ratio: 2.0, index: 0.15, gain: 0.014, attack: 0.9, pan: (i - 1) * 0.6 }));
+  [86, 90, 93, 98].forEach((m, i) => glass(ctx, bus, m, 1.05 + i * 0.11, 1.2, 0.018, i % 2 ? 0.6 : -0.6));
 }
 
 /** A very soft, low "thock": a rounded low tone with a slow-ish attack and a fast fade. */
@@ -468,11 +500,14 @@ async function render(composeFn: (ctx: Ctx) => void, seconds: number, peakTarget
     const buf = await off.startRendering();
     let peak = 0;
     for (let c = 0; c < buf.numberOfChannels; c++) for (const v of buf.getChannelData(c)) peak = Math.max(peak, Math.abs(v));
-    if (peak > 0) {
-      const k = peakTarget / peak;
-      for (let c = 0; c < buf.numberOfChannels; c++) {
-        const d = buf.getChannelData(c);
-        for (let i = 0; i < d.length; i++) d[i] *= k;
+    // Normalize, and fade the last 0.3 s so long reverb tails never end in a cut.
+    const k = peak > 0 ? peakTarget / peak : 1;
+    const fade = Math.min(buf.length, Math.floor(SR * 0.3));
+    for (let c = 0; c < buf.numberOfChannels; c++) {
+      const d = buf.getChannelData(c);
+      for (let i = 0; i < d.length; i++) {
+        const left = d.length - i;
+        d[i] *= k * (left < fade ? left / fade : 1);
       }
     }
     return buf;
@@ -491,9 +526,9 @@ function mediaSession() {
 
 const CUES = {
   intro: { fn: composeIntro, seconds: 6.0, peak: 0.6 },
-  buildStart: { fn: composeBuildStart, seconds: 3.8, peak: 0.52 },
-  buildStep: { fn: composeBuildStep, seconds: 1.2, peak: 0.32 },
-  buildDone: { fn: composeBuildDone, seconds: 4.0, peak: 0.6 },
+  buildStart: { fn: composeBuildStart, seconds: 5.0, peak: 0.55 },
+  buildStep: { fn: composeBuildStep, seconds: 1.8, peak: 0.34 },
+  buildDone: { fn: composeBuildDone, seconds: 6.0, peak: 0.6 },
 } as const;
 type Cue = keyof typeof CUES;
 const cueEls: Partial<Record<Cue, HTMLAudioElement>> = {};
