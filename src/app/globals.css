@@ -1,0 +1,147 @@
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/roboto-condensed/500.css";
+@import "@fontsource/roboto-condensed/700.css";
+@import "@fontsource/roboto-condensed/800.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ───────── Design tokens (single source of truth) ───────── */
+:root,
+[data-theme="dark"] {
+  --bg: 10 10 12;
+  --surface: 20 20 23;
+  --surface-2: 28 28 32;
+  --surface-3: 40 40 46;
+  --line: 255 255 255;
+  --ink: 245 245 247;
+  --ink-2: 168 168 176;
+  --ink-3: 110 110 118;
+  --red: 228 0 43;
+  --red-press: 196 0 37;
+  --red-soft: 228 0 43;
+  --ok: 48 209 88;
+  --warn: 255 176 32;
+  --info: 100 160 255;
+  --line-alpha: 0.08;
+  --line-strong: 0.14;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset;
+  color-scheme: dark;
+}
+[data-theme="light"] {
+  --bg: 244 244 246;
+  --surface: 255 255 255;
+  --surface-2: 246 246 248;
+  --surface-3: 234 234 238;
+  --line: 0 0 0;
+  --ink: 17 17 20;
+  --ink-2: 84 84 92;
+  --ink-3: 130 130 138;
+  --red: 216 0 40;
+  --red-press: 186 0 34;
+  --red-soft: 216 0 40;
+  --ok: 22 150 60;
+  --warn: 190 120 0;
+  --info: 20 100 220;
+  --line-alpha: 0.08;
+  --line-strong: 0.14;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+  color-scheme: light;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+body {
+  @apply bg-bg text-ink font-sans antialiased;
+  font-feature-settings: "cv11", "ss01";
+  overscroll-behavior-y: none;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+.hairline {
+  border-color: rgb(var(--line) / var(--line-alpha));
+}
+.hairline-strong {
+  border-color: rgb(var(--line) / var(--line-strong));
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.px-safe {
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+}
+.h-dvh-safe {
+  min-height: 100dvh;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  scrollbar-width: none;
+}
+input,
+select,
+textarea {
+  font-size: 16px; /* prevents iOS zoom on focus */
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl bg-surface border hairline;
+    box-shadow: var(--shadow);
+  }
+  .card-pad {
+    @apply p-4 sm:p-5;
+  }
+  .eyebrow {
+    @apply text-2xs font-semibold uppercase tracking-[0.14em] text-ink3;
+  }
+  .field-label {
+    @apply mb-1.5 block text-[13px] font-medium text-ink2;
+  }
+  .input {
+    @apply w-full rounded-xl bg-surface2 border hairline px-3.5 py-2.5 text-[16px] text-ink placeholder:text-ink3 outline-none transition;
+  }
+  .input:focus {
+    border-color: rgb(var(--red) / 0.7);
+    box-shadow: 0 0 0 3px rgb(var(--red) / 0.16);
+  }
+  .btn {
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[15px] font-semibold transition active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    @apply btn bg-red text-white hover:bg-red-press;
+  }
+  .btn-secondary {
+    @apply btn bg-surface2 text-ink border hairline hover:bg-surface3;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-ink2 hover:text-ink hover:bg-surface2;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-[13px] rounded-lg;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border hairline px-3 py-1.5 text-[13px] font-medium text-ink2 transition;
+  }
+  .chip-on {
+    @apply border-red/60 bg-red/15 text-ink;
+  }
+  .pill {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-semibold uppercase tracking-wide;
+  }
+  .divide-hair > * + * {
+    border-top: 1px solid rgb(var(--line) / var(--line-alpha));
+  }
+}
