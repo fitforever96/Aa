@@ -282,41 +282,119 @@ function composeIntro(ctx: Ctx) {
   fm(ctx, bus, hz(86), 4.0, 1.3, { ratio: 2.0, index: 0.4, gain: 0.02, attack: 0.3 });
 }
 
-/** Build start: ~3.4 s. A low power-up with soft charge pulses settling into a gentle lock. */
-function composeBuildStart(ctx: Ctx) {
-  const bus = chain(ctx, 0.55, 0.4, 3.0, 5200);
-  sub(ctx, bus, 0.0, 3.0, 32, 58, 0.3);
-  sweepNoise(ctx, bus, 0.0, 0.6, 3200, 300, 0.03, 1.2);
-  riser(ctx, bus, 0.2, 2.2, 70, 900, 0.035);
-  // Soft charge pulses, accelerating.
-  let t = 0.35;
-  for (let i = 0; i < 26 && t < 2.45; i++) {
-    blip(ctx, bus, 660 + i * 22, t, 0.04, 0.02, 0.9, i % 2 ? 0.25 : -0.25);
-    t += 0.18 - i * 0.0058;
+/**
+ * Mechanical "plate lock": a short resonant noise tick with a little low body. Fixed pitch,
+ * no glide. Strings of these read as armor plates and servos seating into place.
+ */
+function plate(ctx: Ctx, out: AudioNode, at: number, gain: number, pitch: number, pan = 0) {
+  const n = ctx.createBufferSource();
+  n.buffer = noiseBuffer(ctx, 0.05);
+  const bp = ctx.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.frequency.value = pitch;
+  bp.Q.value = 7;
+  const g = env(ctx, at, 0.002, gain, 0.0001, 0.045);
+  const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  if (p) {
+    p.pan.value = pan;
+    n.connect(bp).connect(g).connect(p).connect(out);
+  } else n.connect(bp).connect(g).connect(out);
+  n.start(at);
+  const body = ctx.createOscillator();
+  body.type = "sine";
+  body.frequency.value = 150;
+  const bg = env(ctx, at, 0.003, gain * 0.6, 0.0001, 0.06);
+  body.connect(bg).connect(out);
+  body.start(at);
+  body.stop(at + 0.08);
+}
+
+/** Pneumatic release: a short band of air, fixed band (no sweep). */
+function hiss(ctx: Ctx, out: AudioNode, at: number, dur: number, gain: number, band = 2200) {
+  const n = ctx.createBufferSource();
+  n.buffer = noiseBuffer(ctx, dur + 0.05);
+  const bp = ctx.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.frequency.value = band;
+  bp.Q.value = 0.8;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(gain, at + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  n.connect(bp).connect(g).connect(out);
+  n.start(at);
+  n.stop(at + dur + 0.05);
+}
+
+/** Steady reactor tone at a fixed pitch (no glide), fading in and holding. */
+function reactor(ctx: Ctx, out: AudioNode, at: number, dur: number, gain: number) {
+  hum(ctx, out, [38, 45], at, dur, gain);
+  const o = ctx.createOscillator();
+  o.type = "sine";
+  o.frequency.value = hz(38);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(gain * 2.4, at + dur * 0.4);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  o.connect(g).connect(out);
+  o.start(at);
+  o.stop(at + dur + 0.05);
+}
+
+/** Holographic interface chatter: quiet glassy FM taps on fixed pentatonic pitches. */
+function holo(ctx: Ctx, out: AudioNode, at: number, dur: number, count: number, gain: number) {
+  const scale = [74, 76, 79, 81, 83, 86];
+  for (let i = 0; i < count; i++) {
+    const t = at + (i / count) * dur + Math.random() * 0.04;
+    fm(ctx, out, hz(scale[Math.floor(Math.random() * scale.length)]), t, 0.12, { ratio: 2.0, index: 0.6, gain: gain * (0.6 + Math.random() * 0.4), attack: 0.006, pan: Math.random() * 1.4 - 0.7 });
   }
-  lock(ctx, bus, 2.5, 0.22, 1500);
-  chord(ctx, bus, [62, 69, 74], 2.55, 1.1, 0.035);
 }
 
-/** Step locked: ~0.7 s. Two soft rising tones and a quiet lock. */
+/**
+ * Build start: ~3.4 s, "suit-up". Armor plates seat in an accelerating pattern over a steady
+ * reactor tone, with pneumatic releases and holographic interface chatter, ending in a soft lock
+ * and a warm chord. No pitch sweeps.
+ */
+function composeBuildStart(ctx: Ctx) {
+  const bus = chain(ctx, 0.55, 0.36, 2.6, 5200);
+  reactor(ctx, bus, 0.0, 3.4, 0.03);
+  let t = 0.08;
+  for (let i = 0; i < 22 && t < 2.2; i++) {
+    plate(ctx, bus, t, 0.09 + (i % 3 === 0 ? 0.05 : 0), [1700, 2300, 1900, 2700][i % 4], i % 2 ? 0.45 : -0.45);
+    t += Math.max(0.045, 0.16 - i * 0.007);
+  }
+  hiss(ctx, bus, 0.55, 0.35, 0.03, 2600);
+  hiss(ctx, bus, 1.35, 0.4, 0.028, 1800);
+  holo(ctx, bus, 0.9, 1.4, 10, 0.02);
+  lock(ctx, bus, 2.35, 0.2, 1500);
+  chord(ctx, bus, [62, 69, 74], 2.4, 1.1, 0.032);
+}
+
+/** Step locked: ~0.7 s. A pair of plates seating and a soft glassy confirm. */
 function composeBuildStep(ctx: Ctx) {
-  const bus = chain(ctx, 0.5, 0.38, 1.6, 5000);
-  [988, 1318].forEach((f, i) => blip(ctx, bus, f, i * 0.07, 0.08, 0.04, 1, -0.2 + i * 0.4));
-  lock(ctx, bus, 0.16, 0.12, 1800);
+  const bus = chain(ctx, 0.5, 0.36, 1.6, 5000);
+  plate(ctx, bus, 0.0, 0.12, 2100, -0.3);
+  plate(ctx, bus, 0.07, 0.12, 2700, 0.3);
+  fm(ctx, bus, hz(81), 0.12, 0.35, { ratio: 2.0, index: 0.5, gain: 0.03, attack: 0.01 });
+  fm(ctx, bus, hz(86), 0.2, 0.4, { ratio: 2.0, index: 0.4, gain: 0.025, attack: 0.01 });
 }
 
-/** Build complete: ~3.4 s. Deep lock, sub bloom, wide warm chord, a soft final confirm. */
+/** Build complete: ~3.6 s. Final plates lock, a low thump (fixed pitch), a wide warm chord, quiet holo chatter. */
 function composeBuildDone(ctx: Ctx) {
   const bus = chain(ctx, 0.55, 0.46, 3.8, 5600);
-  lock(ctx, bus, 0.0, 0.24, 1400);
-  sub(ctx, bus, 0.0, 1.6, 62, 38, 0.26);
-  chord(ctx, bus, [62, 66, 69, 73, 78, 81], 0.06, 3.2, 0.05);
-  dataBurst(ctx, bus, 0.3, 0.7, 8, 0.016, 1600, 3200);
-  blip(ctx, bus, 1318, 1.2, 0.09, 0.03, 1);
-  blip(ctx, bus, 1976, 1.32, 0.12, 0.025, 1);
+  [0, 0.06, 0.12].forEach((d, i) => plate(ctx, bus, d, 0.12, [1900, 2400, 3000][i], i - 1));
+  lock(ctx, bus, 0.2, 0.22, 1400);
+  const th = ctx.createOscillator();
+  th.type = "sine";
+  th.frequency.value = 55;
+  const tg = env(ctx, 0.2, 0.01, 0.22, 0.0001, 1.0);
+  th.connect(tg).connect(bus);
+  th.start(0.2);
+  th.stop(1.3);
+  chord(ctx, bus, [62, 66, 69, 73, 78, 81], 0.26, 3.2, 0.05);
+  holo(ctx, bus, 0.6, 1.0, 7, 0.016);
 }
 
-/** Interface sounds (short; Web Audio for low latency). */
 /** A very soft, low "thock": a rounded low tone with a slow-ish attack and a fast fade. */
 function thock(ctx: Ctx, out: AudioNode, freq: number, at: number, dur: number, gain: number) {
   const o = ctx.createOscillator();
