@@ -34,7 +34,7 @@ export function IntroSoundToggle() {
           setUiSounds(v);
         }}
         label="Interface sounds"
-        description="Short high-tech clicks when you tap buttons, tabs and cards. Follows your iPhone's silent switch."
+        description="Very soft, low taps when you press buttons, tabs and cards. Follows your iPhone's silent switch."
       />
       <div className="flex flex-wrap gap-2">
         <button

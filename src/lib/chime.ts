@@ -317,19 +317,33 @@ function composeBuildDone(ctx: Ctx) {
 }
 
 /** Interface sounds (short; Web Audio for low latency). */
+/** A very soft, low "thock": a rounded low tone with a slow-ish attack and a fast fade. */
+function thock(ctx: Ctx, out: AudioNode, freq: number, at: number, dur: number, gain: number) {
+  const o = ctx.createOscillator();
+  o.type = "sine";
+  o.frequency.setValueAtTime(freq * 1.15, at);
+  o.frequency.exponentialRampToValueAtTime(freq, at + dur * 0.5);
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 900;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(gain, at + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  o.connect(lp).connect(g).connect(out);
+  o.start(at);
+  o.stop(at + dur + 0.02);
+}
+
+/**
+ * Interface sounds: deliberately barely there. Low, rounded and very quiet so tapping
+ * small controls feels tactile without drawing attention. Peaks are set per sound.
+ */
 const UI_SOUNDS = {
-  tick: { seconds: 0.12, gain: 1, fn: (ctx: Ctx, out: AudioNode) => (blip(ctx, out, 1900, 0, 0.045, 0.06, 0.7), blip(ctx, out, 3800, 0.003, 0.02, 0.008, 0.85)) },
-  confirm: {
-    seconds: 0.4,
-    gain: 1,
-    fn: (ctx: Ctx, out: AudioNode) => {
-      blip(ctx, out, 1046, 0, 0.07, 0.07, 1);
-      blip(ctx, out, 1568, 0.075, 0.11, 0.07, 1);
-      fm(ctx, out, 1568, 0.075, 0.3, { ratio: 2.0, index: 0.5, gain: 0.02, attack: 0.02 });
-    },
-  },
-  nav: { seconds: 0.3, gain: 1, fn: (ctx: Ctx, out: AudioNode) => (sweepNoise(ctx, out, 0, 0.2, 500, 2600, 0.035, 1.2), blip(ctx, out, 880, 0.06, 0.08, 0.04, 1.2)) },
-  toggle: { seconds: 0.2, gain: 1, fn: (ctx: Ctx, out: AudioNode) => (blip(ctx, out, 1318, 0, 0.05, 0.05, 1), blip(ctx, out, 1760, 0.06, 0.06, 0.05, 1)) },
+  tick: { seconds: 0.1, peak: 0.06, fn: (ctx: Ctx, out: AudioNode) => thock(ctx, out, 260, 0, 0.07, 0.5) },
+  toggle: { seconds: 0.16, peak: 0.07, fn: (ctx: Ctx, out: AudioNode) => (thock(ctx, out, 262, 0, 0.07, 0.5), thock(ctx, out, 330, 0.055, 0.08, 0.45)) },
+  confirm: { seconds: 0.22, peak: 0.09, fn: (ctx: Ctx, out: AudioNode) => (thock(ctx, out, 220, 0, 0.09, 0.5), thock(ctx, out, 330, 0.07, 0.12, 0.45)) },
+  nav: { seconds: 0.16, peak: 0.07, fn: (ctx: Ctx, out: AudioNode) => (thock(ctx, out, 220, 0, 0.06, 0.45), thock(ctx, out, 294, 0.045, 0.08, 0.4)) },
 } as const;
 export type UiSound = keyof typeof UI_SOUNDS;
 
@@ -489,12 +503,11 @@ export function prepareUiSounds(): Promise<void> {
       const buf = await render(
         (ctx) => {
           const out = ctx.createGain();
-          out.gain.value = s.gain;
           out.connect(ctx.destination);
           s.fn(ctx, out);
         },
         s.seconds,
-        0.22,
+        s.peak,
       );
       if (buf) uiBuffers[k] = buf;
     }
