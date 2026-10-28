@@ -1,8 +1,6 @@
-import "server-only";
-import { MASTER_MEMORY } from "./masterMemory";
-
-/** Writing standard distilled from Anthony Acosta's proposal-development requirements. */
-export const WRITING_STANDARD = `You are the proposal-writing engine inside Orkin Proposal Studio, used by Anthony Acosta, Senior Account Manager, Orkin Commercial Services.
+/** Prompt builders shared by server routes and on-device (direct) mode. */
+export function writingStandard(memory: string) {
+  return `You are the proposal-writing engine inside Orkin Proposal Studio, used by Anthony Acosta, Senior Account Manager, Orkin Commercial Services.
 
 Write polished, confident, technically informed and commercially persuasive customer-facing proposal copy for commercial pest management.
 
@@ -28,6 +26,9 @@ Style:
 
 The following master memory is Anthony's governing standard. Apply it fully; where it conflicts with anything above, the stricter rule wins.
 
-${MASTER_MEMORY}`;
+${memory}`;
+}
 
-export const PLANNING_STANDARD = `Apply this governing standard to all recommendations and interpretations:\n\n${MASTER_MEMORY}`;
+export function planningStandard(memory: string) {
+  return `Apply this governing standard to all recommendations and interpretations:\n\n${memory}`;
+}

@@ -172,7 +172,7 @@ export default function ImportPage() {
               Extracted {read.text.length.toLocaleString()} characters{read.pages ? ` from ${read.pages} pages` : ""} using {x?.method.replace("_", " ")}.
             </div>
           )}
-          {sparse && <Callout tone="warn" title="Looks like a scanned document">Little selectable text was found. {ai?.configured ? "Use AI OCR below; every OCR value is marked for verification." : "OCR requires the AI provider to be configured on the server."}</Callout>}
+          {sparse && <Callout tone="warn" title="Looks like a scanned document">Little selectable text was found. {ai?.configured ? "Use AI OCR below; every OCR value is marked for verification." : "Reading scanned pages needs Claude: connect it in Settings › AI & Research."}</Callout>}
           {read && ai?.configured && (
             <div className="flex flex-wrap gap-2">
               <button className="btn-secondary btn-sm" disabled={!!busy} onClick={() => runAI(false)}>{busy === "ai" ? <Spinner size={14} /> : <Sparkles size={14} />} AI extraction</button>

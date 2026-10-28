@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import clsx from "clsx";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ArrowDown, ArrowUp, Check, ChevronDown, ExternalLink, FileText, ImagePlus, Plus, RefreshCw, Search, Sparkles, Trash2, X } from "lucide-react";
@@ -306,7 +307,7 @@ export function StepDocument(props: StepProps) {
                 {!settings?.ai.consent && <Callout tone="warn">AI is configured but you haven’t authorized sending proposal content. Enable it in Settings › AI & Research.</Callout>}
               </>
             ) : (
-              <Callout>AI writing isn’t configured on this deployment. The offline writer regenerates sections from your structured scope.</Callout>
+              <Callout>AI writing is off. <Link href="/settings#ai" className="font-semibold text-red">Connect Claude in Settings</Link> to turn it on. Until then, the offline writer regenerates sections from your structured scope.</Callout>
             )}
             <div className="flex flex-wrap gap-2">
               <button className="btn-primary" disabled={!!busy} onClick={() => rewrite(selected.length ? selected : "all")}>
@@ -350,7 +351,7 @@ export function StepDocument(props: StepProps) {
         <SectionTitle>Research</SectionTitle>
         <Card className="space-y-3">
           {!ai?.research ? (
-            <Callout>Live research requires the AI provider to be configured on the server. No research has been performed — the app will not claim otherwise.</Callout>
+            <Callout>Live research needs Claude. <Link href="/settings#ai" className="font-semibold text-red">Connect Claude in Settings</Link>. No research has been performed, and the app will not claim otherwise.</Callout>
           ) : (
             <>
               <TextArea rows={3} value={topics} onChange={setTopics} placeholder={suggestedResearchTopics(p).join("\n")} hint="One topic per line. Orkin Commercial is consulted first, then EPA, CDC, USDA, OSHA and university extension sources." />

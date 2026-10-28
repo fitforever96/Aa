@@ -647,6 +647,8 @@ export interface Settings {
     /** Explicit authorization to send proposal content to the configured AI provider. */
     consent: boolean;
     accessToken: string;
+    /** Claude API key for on-device mode. Stored only on this device; excluded from backups. */
+    apiKey?: string;
     researchEnabled: boolean;
   };
   recentTemplates: string[];

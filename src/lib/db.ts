@@ -151,7 +151,7 @@ export async function exportBackup(d: StudioDB = db()) {
     d.settings.toArray(),
   ]);
   // The AI access passcode is a credential; never include it in backup files.
-  const safeSettings = settings.map((s) => ({ ...s, ai: { ...s.ai, accessToken: "" } }));
+  const safeSettings = settings.map((s) => ({ ...s, ai: { ...s.ai, accessToken: "", apiKey: "" } }));
   return { format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt: nowISO(), data: { proposals, versions, customers, equipment, historical, capabilities, knowledge, assets, assumptionVersions, settings: safeSettings } };
 }
 
@@ -179,7 +179,7 @@ export async function importBackup(json: unknown, mode: "merge" | "replace", d: 
       if (mode === "replace") await d[t].clear();
       if (t === "settings" && currentSettings) {
         // Keep this device's AI passcode.
-        for (const r of rows as unknown as Settings[]) r.ai = { ...r.ai, accessToken: currentSettings.ai.accessToken };
+        for (const r of rows as unknown as Settings[]) r.ai = { ...r.ai, accessToken: currentSettings.ai.accessToken, apiKey: currentSettings.ai.apiKey ?? "" };
       }
       await (d[t] as Table<unknown, string>).bulkPut(rows);
       counts[t] = rows.length;

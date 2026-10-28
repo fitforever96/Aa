@@ -16,36 +16,51 @@ export interface AIStatus {
   passcodeRequired: boolean;
   research: boolean;
   reachable: boolean;
+  mode: "server" | "direct" | "none";
 }
 
-let statusCache: AIStatus | null = null;
+let serverStatus: AIStatus | null = null;
 export function useAIStatus(): AIStatus | null {
-  const [s, setS] = useState<AIStatus | null>(statusCache);
+  const settings = useSettings();
+  const [srv, setSrv] = useState<AIStatus | null>(serverStatus);
   useEffect(() => {
-    if (statusCache) return;
+    if (serverStatus) return;
     if (STATIC_BUILD) {
-      statusCache = { configured: false, model: null, passcodeRequired: false, research: false, reachable: true };
-      setS(statusCache);
+      serverStatus = { configured: false, model: null, passcodeRequired: false, research: false, reachable: true, mode: "none" };
+      setSrv(serverStatus);
       return;
     }
     fetch(withBase("/api/ai/status"))
       .then((r) => r.json())
       .then((j) => {
-        statusCache = { ...j, reachable: true };
-        setS(statusCache);
+        serverStatus = { ...j, reachable: true, mode: j.configured ? "server" : "none" };
+        setSrv(serverStatus);
       })
-      .catch(() => setS({ configured: false, model: null, passcodeRequired: false, research: false, reachable: false }));
+      .catch(() => setSrv({ configured: false, model: null, passcodeRequired: false, research: false, reachable: false, mode: "none" }));
   }, []);
-  return s;
+  if (srv?.configured) return srv;
+  if (settings?.ai.apiKey) return { configured: true, model: "claude-opus-5-5", passcodeRequired: false, research: true, reachable: true, mode: "direct" };
+  return srv;
 }
 
 export class AIError extends Error {}
 
-/** Calls an AI route. Enforces the user's explicit authorization to share content with the AI provider. */
+/**
+ * Calls an AI task. Uses the server when one is configured; otherwise calls Claude
+ * directly from this device with the user's own key. Enforces explicit consent.
+ */
 export async function aiFetch<T>(path: string, body: unknown, settings: Settings | undefined): Promise<T> {
   if (!settings?.ai.consent) throw new AIError("AI features are off. Enable “Allow sending proposal content to the AI provider” in Settings › AI & Research.");
   if (typeof navigator !== "undefined" && !navigator.onLine) throw new AIError("You are offline. AI and research features need a connection; everything else keeps working.");
-  if (STATIC_BUILD) throw new AIError("This installed version runs fully on your phone without a server, so AI features are unavailable. Everything else works.");
+  if (!serverStatus?.configured) {
+    if (!settings.ai.apiKey) throw new AIError("Add your Claude API key in Settings › AI & Research to turn on AI features.");
+    const { runDirect } = await import("./ai/direct");
+    try {
+      return await runDirect<T>(path, body, settings);
+    } catch (e) {
+      throw new AIError(e instanceof Error ? e.message : "AI request failed.");
+    }
+  }
   const res = await fetch(withBase(path), {
     method: "POST",
     headers: { "content-type": "application/json", ...(settings.ai.accessToken ? { "x-studio-token": settings.ai.accessToken } : {}) },

@@ -24,7 +24,7 @@ A mobile-first progressive web app (PWA) for commercial pest-management proposal
 | **PWA** | Manifest, icons, Home Screen standalone mode, safe areas, splash, offline app shell via service worker. Dark (default) and light themes, driven by central design tokens. |
 
 ### What needs configuration or verification
-- **AI writing, research, OCR, AI extraction and AI command interpretation** require `ANTHROPIC_API_KEY` on the server. They are not active until you set it, and the app never claims research happened when it didn't. These routes have not yet been exercised against the live API.
+- **AI writing, research, OCR, AI extraction and AI command interpretation** run on Claude. On the GitHub Pages install, paste your own Claude API key once in Settings › AI & Research: the phone then calls Anthropic directly. The key stays in this device's local database, is never in the code and is excluded from backups, so set a monthly spend limit in the Anthropic console. On a server deployment, set `ANTHROPIC_API_KEY` instead. The app never claims research happened when it didn't. AI requests are tested against a simulated Claude API, not the live one.
 - **Address autocomplete** is not connected. It needs a location provider; enter addresses manually.
 - **Triple Guarantee, A.I.M.® and InSite® wording** comes from your reference proposal. Verify it against current orkin.com/commercial material, then mark it verified in Knowledge › Orkin terminology.
 - **Equipment selling prices** start empty on purpose. Customer-specific historical equipment prices are references only. Set approved prices in Knowledge › Equipment.
@@ -45,7 +45,7 @@ To change the standard, update the `MASTER_MEMORY` environment variable and rede
 npm install          # also copies the PDF.js worker and PDF fonts into /public
 cp .env.example .env.local   # optional: add ANTHROPIC_API_KEY to enable AI
 npm run dev          # http://localhost:3000
-npm test             # 75 tests: calculations, guards, QC, persistence, import, PDF export + visual QA
+npm test             # 81 tests: calculations, guards, QC, persistence, import, PDF export + visual QA
 npm run build && npm start
 ```
 
@@ -55,7 +55,7 @@ Useful scripts:
 - `node scripts/make-icons.cjs` regenerates the PWA icons.
 
 ## Free install link (GitHub Pages)
-The workflow `.github/workflows/pages.yml` tests, builds and publishes a static version to the `gh-pages` branch on every push, served at **https://fitforever96.github.io/Aa/**. This version runs entirely on the phone: estimates, pricing, documents, PDF export, import, backups and offline use all work. AI writing, research and OCR need a server (Vercel below). Build locally with `bash scripts/build-pages.sh` and preview with `node scripts/serve-pages.cjs 3200` → http://localhost:3200/Aa/.
+The workflow `.github/workflows/pages.yml` tests, builds and publishes a static version to the `gh-pages` branch on every push, served at **https://fitforever96.github.io/Aa/**. This version runs entirely on the phone: estimates, pricing, documents, PDF export, import, backups and offline use all work. AI works after you paste your Claude API key in Settings › AI & Research (or deploy to a server, below). Build locally with `bash scripts/build-pages.sh` and preview with `node scripts/serve-pages.cjs 3200` → http://localhost:3200/Aa/.
 
 ## Deploy (Vercel)
 

@@ -10,6 +10,7 @@ import { Badge, Callout, Card, Page, PageHeader, SectionTitle, Segmented, Select
 import { useToast } from "@/components/shell/Toast";
 import { formatMoney } from "@/lib/engine/money";
 import { UnlockPrivateData } from "@/components/UnlockPrivateData";
+import { ClaudeKeySetup } from "@/components/ClaudeKeySetup";
 import type { Settings } from "@/lib/types";
 
 export default function SettingsPage() {
@@ -141,18 +142,22 @@ export default function SettingsPage() {
           <UnlockPrivateData compact />
         </Card>
 
+        <div id="ai" />
         <SectionTitle>AI & research</SectionTitle>
         <Card className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="text-[14px]">Server AI provider</div>
-            {ai === null ? <Spinner size={14} /> : ai.configured ? <Badge tone="ok">Configured · {ai.model}</Badge> : ai.reachable ? <Badge tone="warn">Not configured</Badge> : <Badge>Offline</Badge>}
-          </div>
-          {!ai?.configured && ai?.reachable && <Callout>Set <code>ANTHROPIC_API_KEY</code> on the server (see README). Everything except AI writing, research, OCR and AI interpretation works without it.</Callout>}
+          {ai?.mode === "server" ? (
+            <div className="flex items-center justify-between">
+              <div className="text-[14px]">Server AI provider</div>
+              <Badge tone="ok">Configured · {ai.model}</Badge>
+            </div>
+          ) : (
+            <ClaudeKeySetup settings={s} />
+          )}
           <Toggle checked={s.ai.consent} onChange={(v) => save((x) => void (x.ai.consent = v))} label="Allow sending proposal content to the AI provider" description="Required before any AI or research request. Off by default." />
           <Toggle checked={s.ai.researchEnabled} onChange={(v) => save((x) => void (x.ai.researchEnabled = v))} label="Enable web research" description="Searches orkin.com/commercial first, then EPA, CDC, USDA, OSHA and university extension sites." />
           {ai?.passcodeRequired && <TextField label="Access passcode" type="password" value={s.ai.accessToken} onChange={(v) => save((x) => void (x.ai.accessToken = v))} hint="Matches APP_ACCESS_TOKEN on the server. Stored on this device only; excluded from backups." />}
           <Callout title="What stays on this device / what is sent">
-            Proposals, prices, estimates, documents, photos and settings are stored locally in this browser (IndexedDB) and are not cloud-synced or encrypted by the app. When you use an AI feature, only that request is sent over HTTPS to this app’s server and on to Anthropic: writing requests include customer-facing proposal facts and section text (never internal rates, minutes or yields); research sends topics and a short property summary; import/OCR sends the document text or page images you chose. API keys never reach the browser, and the server does not log proposal content.
+            Proposals, prices, estimates, documents, photos and settings are stored locally on this device (IndexedDB) and are not cloud-synced or encrypted by the app. When you use an AI feature, only that request is sent over HTTPS to Anthropic (directly from this phone, or through this app’s server when one is configured): writing requests include customer-facing proposal facts and section text (never internal rates, minutes or yields); research sends topics and a short property summary; import/OCR sends the document text or page images you chose. Your Claude API key is stored only on this device, is never part of the app’s code and is excluded from backups. Anyone with access to this unlocked phone could use it, so set a monthly spend limit in the Anthropic console.
           </Callout>
         </Card>
 
