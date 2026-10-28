@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { introSoundEnabled, playChime, prepareChime } from "@/lib/chime";
 
 const SEEN_KEY = "ops-intro-seen";
-const MIN_MS = 2300;
+const MIN_MS = 3200;
 const EXIT_MS = 600;
 
 function seenThisLaunch(): boolean {
@@ -86,6 +86,9 @@ export function Intro({ ready, error, onExit }: { ready: boolean; error: string 
         </div>
         <div className="intro-bar mt-3 w-[210px]" />
         <div className="intro-sub mt-4 pl-[0.42em] text-[12px] font-semibold uppercase text-white/70">Proposal Studio</div>
+      </div>
+      <div className="intro-credit absolute inset-x-0 text-center text-[10.5px] font-medium uppercase text-white/80" style={{ bottom: "calc(env(safe-area-inset-bottom) + 48px)" }}>
+        Designed by Anthony Acosta
       </div>
       {error && <div className="absolute bottom-24 max-w-xs px-6 text-center text-[13px] text-red">Local storage is unavailable ({error}). Private browsing can block IndexedDB.</div>}
     </div>
