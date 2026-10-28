@@ -55,7 +55,7 @@ Useful scripts:
 - `node scripts/make-icons.cjs` regenerates the PWA icons.
 
 ## Free install link (GitHub Pages)
-The workflow `.github/workflows/pages.yml` tests, builds and publishes a static version to **https://fitforever96.github.io/Aa/** once GitHub Pages is enabled (Settings › Pages › Source: **GitHub Actions**). This version runs entirely on the phone: estimates, pricing, documents, PDF export, import, backups and offline use all work. AI writing, research and OCR need a server (Vercel below). Build locally with `bash scripts/build-pages.sh` and preview with `node scripts/serve-pages.cjs 3200` → http://localhost:3200/Aa/.
+The workflow `.github/workflows/pages.yml` tests, builds and publishes a static version to the `gh-pages` branch on every push, served at **https://fitforever96.github.io/Aa/**. This version runs entirely on the phone: estimates, pricing, documents, PDF export, import, backups and offline use all work. AI writing, research and OCR need a server (Vercel below). Build locally with `bash scripts/build-pages.sh` and preview with `node scripts/serve-pages.cjs 3200` → http://localhost:3200/Aa/.
 
 ## Deploy (Vercel)
 
