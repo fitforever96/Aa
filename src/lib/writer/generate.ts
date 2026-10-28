@@ -3,6 +3,7 @@ import { MODEL_CONTEXT, SERVICE_COPY } from "./library";
 import { newSection } from "../commands/ops";
 import { frequencyLabel } from "../engine/frequency";
 import { SERVICE_LABELS } from "../engine/assumptions";
+import { frequencyRationale, rotationCheck, rotationSentence } from "./rationale";
 
 /**
  * Offline, deterministic proposal writer. Produces customer-specific sections from
@@ -19,14 +20,14 @@ export interface WriterContext {
 }
 
 export const SECTION_PLAN: Record<ProposalKind, SectionType[]> = {
-  small_commercial: ["executive_overview", "coverage", "service_methodology", "ipm", "equipment_allocation", "service_frequency", "investment", "specialty_services", "customer_responsibilities", "implementation", "exclusions", "authorization"],
-  multifamily_rotation: ["executive_overview", "property_assessment", "coverage", "ipm", "service_frequency", "implementation", "investment", "specialty_services", "portfolio_schedules", "customer_responsibilities", "exclusions", "authorization"],
-  intensive_treatment: ["executive_overview", "property_assessment", "program_objectives", "pest_specific", "service_methodology", "service_frequency", "review_milestones", "investment", "specialty_services", "customer_responsibilities", "exclusions", "authorization"],
-  industrial: ["executive_overview", "property_assessment", "program_objectives", "service_methodology", "equipment_allocation", "ipm", "documentation", "service_frequency", "implementation", "review_milestones", "investment", "specialty_services", "customer_responsibilities", "exclusions", "authorization"],
-  government: ["executive_overview", "property_assessment", "program_objectives", "service_methodology", "equipment_allocation", "ipm", "documentation", "service_frequency", "implementation", "investment", "specialty_services", "customer_responsibilities", "exclusions", "authorization"],
-  rfp: ["executive_overview", "property_assessment", "program_objectives", "service_methodology", "equipment_allocation", "ipm", "documentation", "service_frequency", "implementation", "review_milestones", "investment", "specialty_services", "customer_responsibilities", "exclusions", "authorization"],
-  portfolio: ["executive_overview", "property_assessment", "coverage", "ipm", "service_frequency", "implementation", "investment", "specialty_services", "portfolio_schedules", "customer_responsibilities", "exclusions", "authorization"],
-  consulting: ["executive_overview", "program_objectives", "service_methodology", "documentation", "service_frequency", "investment", "exclusions", "authorization"],
+  small_commercial: ["executive_overview", "coverage", "service_methodology", "ipm", "equipment_allocation", "service_frequency", "investment", "specialty_services", "customer_responsibilities", "implementation", "exclusions", "conclusion"],
+  multifamily_rotation: ["executive_overview", "property_assessment", "coverage", "ipm", "service_frequency", "implementation", "investment", "specialty_services", "portfolio_schedules", "customer_responsibilities", "exclusions", "conclusion"],
+  intensive_treatment: ["executive_overview", "property_assessment", "program_objectives", "pest_specific", "service_methodology", "service_frequency", "review_milestones", "investment", "specialty_services", "customer_responsibilities", "exclusions", "conclusion"],
+  industrial: ["executive_overview", "property_assessment", "program_objectives", "service_methodology", "equipment_allocation", "ipm", "documentation", "service_frequency", "implementation", "review_milestones", "investment", "specialty_services", "customer_responsibilities", "exclusions", "conclusion"],
+  government: ["executive_overview", "property_assessment", "program_objectives", "service_methodology", "equipment_allocation", "ipm", "documentation", "service_frequency", "implementation", "investment", "specialty_services", "customer_responsibilities", "exclusions", "conclusion"],
+  rfp: ["executive_overview", "property_assessment", "program_objectives", "service_methodology", "equipment_allocation", "ipm", "documentation", "service_frequency", "implementation", "review_milestones", "investment", "specialty_services", "customer_responsibilities", "exclusions", "conclusion"],
+  portfolio: ["executive_overview", "property_assessment", "coverage", "ipm", "service_frequency", "implementation", "investment", "specialty_services", "portfolio_schedules", "customer_responsibilities", "exclusions", "conclusion"],
+  consulting: ["executive_overview", "program_objectives", "service_methodology", "review_milestones", "documentation", "investment", "exclusions", "conclusion"],
 };
 
 export const SECTION_TITLES: Record<SectionType, string> = {
@@ -50,6 +51,7 @@ export const SECTION_TITLES: Record<SectionType, string> = {
   reporting_capability: "Service Visibility",
   exclusions: "Exclusions",
   authorization: "Program Authorization",
+  conclusion: "Conclusion & Next Step",
   photos: "Site Photos",
   floor_plans: "Floor Plans",
   custom: "Custom Section",
@@ -94,7 +96,7 @@ export function generateSection(type: SectionType, p: Proposal, ctx: WriterConte
       const scope = devices.length ? ` The program is built around ${list(devices)}, serviced on a ${freq} schedule,` : ` Service is delivered on a ${freq} schedule,`;
       return s({
         eyebrow: "Executive Overview",
-        headline: p.kind === "multifamily_rotation" || p.kind === "portfolio" ? "A program built for" : "A program built for",
+        headline: "A program built for",
         headlineAccent: p.kind === "portfolio" ? `how ${cust} operates.` : `${site}.`,
         body: [
           `Orkin proposes a ${svc.length > 1 ? "coordinated" : "focused"} ${pestWords(p)} program for ${site}${p.property.address.city ? ` in ${p.property.address.city}${p.property.address.state ? `, ${p.property.address.state}` : ""}` : ""}. The approach applies Integrated Pest Management to the specific conditions of this ${sqft}${env.environment}: inspect first, treat where pests live and travel, and document what is found so each visit builds on the last.`,
@@ -119,7 +121,7 @@ export function generateSection(type: SectionType, p: Proposal, ctx: WriterConte
         headline: "Understanding the site.",
         headlineAccent: "Planning the response.",
         body: [
-          `${site}${facts.length ? ` — ${list(facts)}` : ""}${p.property.operatingEnvironment ? ` — operates as ${p.property.operatingEnvironment.toLowerCase()}` : ""}. Service planning reflects the areas that carry the most pest risk rather than treating every square foot the same.`,
+          `${site}${facts.length ? ` (${list(facts)})` : ""}${p.property.operatingEnvironment ? ` operates as ${p.property.operatingEnvironment.toLowerCase()}` : ""}. Service planning reflects the areas that carry the most pest risk rather than treating every square foot the same.`,
           conditions.length ? conditions.map((c) => `- ${c}`).join("\n") : "",
           "Conditions described in this proposal reflect information provided to date. Entry points, activity levels and device locations are confirmed on site during the initial service.",
         ]
@@ -149,6 +151,18 @@ export function generateSection(type: SectionType, p: Proposal, ctx: WriterConte
         callout: "Quoted separately: bed bugs, intensive cleanouts, exclusion, specialized equipment and other out-of-scope work require written approval unless listed in this proposal.",
       });
     case "service_methodology":
+      if (p.kind === "consulting")
+        return s({
+          eyebrow: "Engagement Approach",
+          headline: "Assessment first.",
+          headlineAccent: "Findings you can act on.",
+          body: "This is an advisory engagement. It covers assessment, inspection, findings and written recommendations; pest-control treatments are not included unless listed in this proposal. Conclusions are based on what is observed during the assessment and are not determined in advance.",
+          items: [
+            { title: "Assess", body: "Inspect the defined areas, including restricted or lower-level spaces where access is provided." },
+            { title: "Document", body: "Record conditions, evidence of activity and contributing factors." },
+            { title: "Recommend", body: "Prioritized structural, sanitation and program recommendations in the agreed report format." },
+          ],
+        });
       return s({
         eyebrow: "Service Methodology",
         headline: "How every visit works.",
@@ -183,25 +197,27 @@ export function generateSection(type: SectionType, p: Proposal, ctx: WriterConte
         headline: "The right device.",
         headlineAccent: "In the right place.",
         body: devices.length
-          ? `Equipment is allocated to intercept pests along the routes they travel — exterior devices at the perimeter, interior devices at entry points, wall lines and risk areas. Final placement is confirmed on site and mapped during installation.`
+          ? `Equipment is allocated to intercept pests along the routes they travel: exterior devices at the perimeter, interior devices at entry points, wall lines and risk areas. Final placement is confirmed on site and mapped during installation.`
           : "No equipment is included in the current scope.",
       });
     case "service_frequency": {
-      const lines = p.programs.map((pr) => `- ${pr.name}: ${frequencyLabel(pr.frequency)}${pr.billing.method === "fixed_monthly" && pr.billing.fixedMonthlyApproved ? " (billed monthly)" : pr.chargeType === "recurring" ? " (billed per completed service visit)" : ""}`);
+      const lines = p.programs.map((pr) => `- ${pr.name}: ${frequencyLabel(pr.frequency)}${pr.billing.method === "fixed_monthly" && pr.billing.fixedMonthlyApproved ? ", billed monthly" : pr.chargeType === "recurring" ? ", billed per completed service visit" : ""}`);
+      const rationale = p.programs.map((pr) => (p.programs.length > 1 ? `${pr.name}: ` : "") + frequencyRationale(p.property, pr));
+      const rot = p.programs.map((pr) => rotationCheck(p.property, pr)).find(Boolean);
       return s({
         eyebrow: "Service Frequency",
         headline: "The right frequency.",
         headlineAccent: p.kind === "multifamily_rotation" ? "The right apartment allocation." : "For the pressure on site.",
         body: [
-          p.kind === "multifamily_rotation"
-            ? "Service is structured to provide consistent inspection opportunities, sufficient unit capacity and follow-up time. Each property’s visit frequency, rotation minimum, unit allocation and price appear in the attached schedules."
-            : `Visit frequency reflects the activity, risk areas and equipment at ${site}.`,
+          p.kind === "portfolio" ? "Each participating property’s visit frequency, rotation minimum, apartment allocation and price appear in the attached schedules." : "",
+          ...rationale,
+          rot ? rotationSentence(rot) : "",
           lines.join("\n"),
-          primary?.frequency.kind === "weekly" ? "Weekly service follows the calendar; some months include five scheduled visits." : "",
+          p.programs.some((pr) => pr.frequency.kind === "weekly") ? "Weekly service follows the calendar, so some months include five scheduled visits." : "",
         ]
           .filter(Boolean)
           .join("\n\n"),
-        callout: p.kind === "multifamily_rotation" ? "Rotation targets are subject to resident access, reported pest activity and property-specific service priorities." : "",
+        callout: p.kind === "multifamily_rotation" || p.kind === "portfolio" ? "Rotation targets are subject to resident access, reported pest activity and property-specific service priorities." : "",
       });
     }
     case "pest_specific":
@@ -262,29 +278,46 @@ export function generateSection(type: SectionType, p: Proposal, ctx: WriterConte
           { title: "Refine", body: "Review activity, access and recommendations with management and adjust the program as needed." },
         ],
       });
-    case "review_milestones":
+    case "review_milestones": {
+      const rodent = svc.some((x) => x === "rodent" || x === "exterior_baiting" || x === "interior_trapping");
+      const items =
+        p.kind === "consulting" || p.programs.every((pr) => pr.services.every((x) => x === "consulting"))
+          ? [
+              { title: "Kickoff", body: "Confirm objectives, areas in scope, access, contacts and reporting format." },
+              { title: "Assessment", body: "Inspection of the defined areas and documentation of conditions observed." },
+              { title: "Interim findings", body: "Preliminary observations and priority recommendations shared with stakeholders." },
+              { title: "Final report", body: "Draft for review, then a final report with findings and recommendations." },
+            ]
+          : rodent
+            ? [
+                { title: "Initial service", body: "Baseline inspection, device installation and mapping, and priority recommendations." },
+                { title: "60-day review", body: "Activity and capture trends, device performance, recurring problem areas and status of structural and sanitation items." },
+                { title: "Ongoing evaluation", body: "Frequency and placement are adjusted only on documented findings and by mutual agreement." },
+              ]
+            : [
+                { title: "Initial service", body: "Baseline findings and priority recommendations." },
+                { title: "First review", body: "Activity trends and status of recommended corrections." },
+                { title: "Program review", body: "Formal review of results; any frequency or scope change requires written agreement." },
+              ];
       return s({
         eyebrow: "Review Milestones",
         headline: "Results reviewed.",
-        headlineAccent: "Program adjusted.",
-        body: "Program performance is reviewed with management at defined points so frequency and scope stay matched to conditions.",
-        items: [
-          { title: "Initial service", body: "Baseline findings, device map and priority recommendations." },
-          { title: "30–60 days", body: "Activity trends and status of recommended corrections." },
-          { title: "60–90 days", body: "Formal program review; any frequency or scope change requires written agreement." },
-        ],
+        headlineAccent: "Program adjusted on findings.",
+        body: "Review milestones are structured evaluation points, not guaranteed outcomes. They keep frequency and scope matched to the conditions actually documented on site.",
+        items,
       });
+    }
     case "triple_guarantee": {
       const cap = ctx.capabilities.find((c) => c.id === "cap_triple_guarantee");
       return s({
         eyebrow: "Orkin Commercial Triple Guarantee",
         headline: "Protection you can count on.",
         body: cap?.customerFacingText ?? "",
-        // Wording reproduced from Anthony's approved reference proposal; QC requires verification against orkin.com before sending.
+        // Master memory §14: no hour-specific response commitments; terms come only from the executed agreement.
         items: [
-          { title: "Response Guarantee", body: "Orkin responds to requests within two hours and, when needed, provides an on-site representative within 24 hours, subject to the Orkin customer agreement." },
-          { title: "Reimbursement Guarantee", body: "If a regulatory agency imposes a fine due solely to a pest infestation, Orkin provides reimbursement of paid qualifying fines under the terms of the agreement." },
-          { title: "360° Satisfaction Guarantee", body: "Startup, ongoing and continued satisfaction protection, including remedy through an alternate provider when applicable, as defined in the agreement." },
+          { title: "Response assurance", body: "Orkin’s commitments for responding to service requests, as defined in the executed Orkin agreement." },
+          { title: "Regulatory fine protection", body: "Provisions for eligible regulatory fines resulting from pest activity, subject to the published terms and the executed agreement." },
+          { title: "Satisfaction provisions", body: "Satisfaction-related remedies as defined by the current Orkin Commercial Triple Guarantee terms and the executed agreement." },
         ],
         callout: "Guarantee terms, eligibility, limitations and remedies apply only as expressly stated in the executed Orkin service agreement.",
         contractual: true,
@@ -294,7 +327,7 @@ export function generateSection(type: SectionType, p: Proposal, ctx: WriterConte
       return s({
         eyebrow: "Exclusions",
         headline: "What is not included.",
-        body: [...new Set([...ctx.settings.defaultExclusions, ...svc.flatMap((x) => SERVICE_COPY[x].exclusions)])].map((e) => `- ${e}`).join("\n"),
+        body: [...new Set([...ctx.settings.defaultExclusions, ...svc.flatMap((x) => SERVICE_COPY[x].exclusions), ...(svc.some((x) => ["bed_bug", "german_cockroach", "bed_bug_heat"].includes(x)) ? ["Scheduled service visits, planned follow-ups, callbacks between visits and additional billable treatments are distinct; their scope and limits are defined in the service agreement."] : [])])].map((e) => `- ${e}`).join("\n"),
         contractual: true,
       });
     case "authorization":
@@ -304,6 +337,18 @@ export function generateSection(type: SectionType, p: Proposal, ctx: WriterConte
         body: `To proceed, ${cust} approves the scope and pricing in this proposal and executes the applicable Orkin service agreement. Start dates, guarantees, taxes and amendments follow the executed agreement.`,
         contractual: true,
       });
+    case "conclusion": {
+      const who = p.customer.contactName || cust;
+      return s({
+        eyebrow: "Next Step",
+        headline: "A program built around",
+        headlineAccent: `${site}.`,
+        body: [
+          `This program pairs scheduled ${freq} service with documented inspection, monitoring and recommendations so pest activity at ${site} is identified early and addressed in a consistent way. Its results depend on collaboration between the Orkin Pro and the site team.`,
+          `The next step is to confirm the scope and schedule with ${who} so the servicing branch can finalize the agreement and schedule the initial service.`,
+        ].join("\n\n"),
+      });
+    }
     case "photos":
       return s({ eyebrow: "Site Photos", headline: "Site observations.", body: "" });
     case "floor_plans":

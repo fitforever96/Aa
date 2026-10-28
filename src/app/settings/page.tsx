@@ -123,6 +123,22 @@ export default function SettingsPage() {
           </div>
         </Card>
 
+        <SectionTitle>Writing standards</SectionTitle>
+        <Card className="space-y-2 text-[13.5px] leading-relaxed text-ink2">
+          <p><b className="text-ink">Master memory applied.</b> Your Orkin proposal-development master memory governs AI writing, recommendations and command interpretation (server-side; it is not sent to the browser). Its rules are also built into the offline writer and quality control:</p>
+          <ul className="list-inside list-disc space-y-0.5 text-[13px] text-ink3">
+            <li>No hour-specific response promises (the rejected 24-hour on-site language is blocked everywhere)</li>
+            <li>No eradication, compliance, refund or unlimited-service promises; no National Accounts claims for multistate work</li>
+            <li>No automatic signature/authorization pages or annualized totals</li>
+            <li>Site-specific frequency rationale and verified rotation arithmetic</li>
+            <li>60-day rodent review milestones; consulting deliverables kept separate from treatment</li>
+            <li>Nonlethal bird deterrence; no goose roundup/relocation; wildlife methods require legal review</li>
+            <li>RFP requirements matrix for government and procurement proposals</li>
+            <li>Plain, direct style: no buzzwords, excessive em dashes or exclamation marks</li>
+          </ul>
+          <p className="text-[12px] text-ink3">Project precedents (NRP structure, GM rebate, Dearborn, Wayne County, U-M, price protection) are in Knowledge › Historical pricing as customer-specific references.</p>
+        </Card>
+
         <SectionTitle>AI & research</SectionTitle>
         <Card className="space-y-3">
           <div className="flex items-center justify-between">

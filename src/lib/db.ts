@@ -62,7 +62,7 @@ export function setDB(d: StudioDB) {
 
 export async function ensureSeeded(d: StudioDB = db()): Promise<void> {
   const seeded = await d.meta.get("seeded_v1");
-  if (seeded) return;
+  if (seeded) return migrate(d);
   await d.transaction("rw", [d.equipment, d.historical, d.capabilities, d.assumptionVersions, d.settings, d.meta], async () => {
     const version: AssumptionVersion = { id: uid("asv"), effectiveDate: nowISO().slice(0, 10), createdAt: nowISO(), note: "Initial defaults — $210/hr, Tin Cat 1 min, bait station 2 min confirmed; all other values are app planning estimates.", assumptions: cloneAssumptions(DEFAULT_ASSUMPTIONS) };
     await d.assumptionVersions.add(version);
@@ -71,6 +71,21 @@ export async function ensureSeeded(d: StudioDB = db()): Promise<void> {
     await d.historical.bulkPut(SEED_HISTORICAL);
     await d.capabilities.bulkPut(SEED_CAPABILITIES);
     await d.meta.put({ key: "seeded_v1", value: nowISO() });
+    await d.meta.put({ key: "seeded_v2", value: nowISO() });
+  });
+}
+
+/** v2: master-memory alignment for installs seeded before it existed. Adds missing records; never overwrites user edits except the rejected guarantee notes. */
+async function migrate(d: StudioDB) {
+  if (await d.meta.get("seeded_v2")) return;
+  await d.transaction("rw", [d.historical, d.capabilities, d.settings, d.meta], async () => {
+    for (const h of SEED_HISTORICAL) if (!(await d.historical.get(h.id))) await d.historical.add(h);
+    const tg = await d.capabilities.get("cap_triple_guarantee");
+    const seedTg = SEED_CAPABILITIES.find((c) => c.id === "cap_triple_guarantee")!;
+    if (tg && /2 × 24|within 24 hours/.test(tg.internalNotes)) await d.capabilities.put({ ...tg, internalNotes: seedTg.internalNotes });
+    const s = await d.settings.get("settings");
+    if (s && !s.profile.branch) await d.settings.put({ ...s, profile: { ...s.profile, branch: "Detroit Commercial · Branch 693" } });
+    await d.meta.put({ key: "seeded_v2", value: nowISO() });
   });
 }
 

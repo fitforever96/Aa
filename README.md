@@ -30,7 +30,14 @@ A mobile-first progressive web app (PWA) for commercial pest-management proposal
 - **Equipment selling prices** start empty on purpose. The GM Pontiac $28/$20 prices are recorded as customer-specific history. Set approved prices in Knowledge › Equipment.
 - Every time standard other than the three confirmed values is an **app-generated planning estimate**, labeled as such and editable in Knowledge › Time standards.
 - Data lives on the device. It is **not cloud-synced and not encrypted by the app**. Use Settings › Backup.
-- The "master memory" document referenced in the original request was not received. Business rules were taken from the request text and the NRP reference proposal.
+
+## Master memory (writing standards)
+Anthony's proposal-development master memory lives in `src/server/masterMemory.ts` (server-only, prompt-cached). It is included in the AI writing, recommendation and command prompts. Its enforceable rules are also implemented in code:
+- **Writer** (`src/lib/writer/`): no automatic signature pages (a concise conclusion and next step instead); site-specific frequency rationale and validated rotation arithmetic (`rationale.ts`); 60-day rodent reviews; consulting deliverables separate from treatment; Triple Guarantee described only as agreement-governed provisions, with no hour commitments.
+- **QC** (`src/lib/qc.ts`): blocks response-time promises (including the rejected "on-site within 24 hours"); blocks eradication, compliance, refund and unlimited-service promises; flags goose roundup/relocation and other wildlife methods, owl-box control claims, start-date language, buzzwords and em-dash overuse, "comprehensive" claims and signature pages; checks the rotation math; checks that the RFP requirements matrix is complete.
+- **Precedents** (`src/lib/seed.ts`): NRP structure, GM 3% rebate, Dearborn, Wayne County, U-M advisory, two-year price protection, all customer-specific. Existing installs receive them through a one-time migration.
+
+To change the standard, edit `masterMemory.ts` and redeploy.
 
 ## Run locally
 
@@ -38,7 +45,7 @@ A mobile-first progressive web app (PWA) for commercial pest-management proposal
 npm install          # also copies the PDF.js worker and PDF fonts into /public
 cp .env.example .env.local   # optional: add ANTHROPIC_API_KEY to enable AI
 npm run dev          # http://localhost:3000
-npm test             # 62 tests: calculations, guards, QC, persistence, import, PDF export + visual QA
+npm test             # 75 tests: calculations, guards, QC, persistence, import, PDF export + visual QA
 npm run build && npm start
 ```
 
@@ -64,6 +71,7 @@ Any Node 20+ host that runs `next start` behind HTTPS also works.
 Open the HTTPS URL in **Safari**, tap **Share → Add to Home Screen**, then launch *Proposal Studio* from the Home Screen. Saved drafts, estimates, the knowledge library and PDF export all work offline. AI and research need a connection.
 
 ## Privacy & security
+- **Bundle exposure:** the seeded historical prices and precedents ship in the app's JavaScript bundle, so anyone who can load the site can read them. Before deploying, enable **Vercel Deployment Protection** (password or Vercel Authentication) so only you can open the app. The master memory itself is server-only.
 - API keys stay in server environment variables. The browser calls `/api/ai/*` routes, which validate input with zod, enforce size limits, rate-limit, and optionally require `APP_ACCESS_TOKEN`.
 - No AI request is sent until you enable **Allow sending proposal content to the AI provider** in Settings.
 - Writing requests send customer-facing facts and section text only, never internal rates, minutes, yields or notes. The server does not log proposal content.

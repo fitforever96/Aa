@@ -8,7 +8,7 @@ const freq = z.object({
   customVisitsPerYear: z.number().positive().optional(),
   customIntervalDays: z.number().positive().optional(),
 });
-const sectionType = z.enum(["executive_overview", "property_assessment", "program_objectives", "coverage", "service_methodology", "ipm", "equipment_allocation", "service_frequency", "pest_specific", "documentation", "investment", "specialty_services", "portfolio_schedules", "customer_responsibilities", "implementation", "review_milestones", "triple_guarantee", "reporting_capability", "exclusions", "authorization", "photos", "floor_plans", "custom"]);
+const sectionType = z.enum(["executive_overview", "property_assessment", "program_objectives", "coverage", "service_methodology", "ipm", "equipment_allocation", "service_frequency", "pest_specific", "documentation", "investment", "specialty_services", "portfolio_schedules", "customer_responsibilities", "implementation", "review_milestones", "triple_guarantee", "reporting_capability", "exclusions", "authorization", "conclusion", "photos", "floor_plans", "custom"]);
 
 export const OpSchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("set_frequency"), programIndex: z.number().int().min(0).optional(), frequency: freq }),

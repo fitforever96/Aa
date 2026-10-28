@@ -12,6 +12,7 @@ import { formatMoney } from "@/lib/engine/money";
 import type { ServiceCategory, SpecialtyItem } from "@/lib/types";
 import { FrequencyEditor } from "./FrequencyEditor";
 import { ProgramTabs } from "./ProgramTabs";
+import { RfpMatrix } from "./RfpMatrix";
 import { prog, type StepProps } from "./types";
 
 const CATS = Object.keys(SERVICE_LABELS) as ServiceCategory[];
@@ -103,6 +104,7 @@ export function StepServices(props: StepProps) {
           </div>
         )}
       </div>
+      {(p.kind === "government" || p.kind === "rfp") && <RfpMatrix {...props} />}
       <Sheet open={histOpen} onClose={() => setHistOpen(false)} title="Historical specialty references">
         <Callout tone="warn" className="mb-3">These are customer-specific historical prices for comparison. Adding one creates an unapproved line you must review and approve.</Callout>
         <div className="divide-hair">

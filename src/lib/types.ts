@@ -323,6 +323,7 @@ export type SectionType =
   | "reporting_capability"
   | "exclusions"
   | "authorization"
+  | "conclusion"
   | "photos"
   | "floor_plans"
   | "custom";
@@ -391,6 +392,16 @@ export interface ServiceRecommendation {
   createdAt: ISODate;
 }
 
+/** RFP / procurement requirements matrix entry (master memory §43). Internal only. */
+export interface RfpRequirement {
+  id: ID;
+  requirement: string;
+  category: "service" | "pricing_format" | "submission" | "documentation" | "reporting" | "contract" | "other";
+  mandatory: boolean;
+  status: "open" | "addressed" | "needs_approval" | "cannot_perform";
+  response: string; // where/how it is addressed
+}
+
 export interface ApprovedSnapshot {
   approvedAt: ISODate;
   /** Final customer-facing prices at approval, keyed "programId:recurring" etc. */
@@ -419,6 +430,8 @@ export interface Proposal {
   laborRateOverrideCents: Cents | null;
   approvedSnapshot: ApprovedSnapshot | null;
   internalNotes: string;
+  /** Present for government/RFP proposals. */
+  rfpRequirements?: RfpRequirement[];
   templateUsed: string | null;
   importedFrom: { fileName: string; docId: ID | null; mode: ImportMode } | null;
   wizardStep: number;

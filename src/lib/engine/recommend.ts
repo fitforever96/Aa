@@ -63,7 +63,9 @@ export function recommendProgram(property: PropertyInfo, program: ServiceProgram
       recommended.push("Device placement along dock doors, both sides of exterior doors and interior wall lines; rack-line monitoring where product is stored.");
       verify.push("Dock seals, leveler pits and door sweeps.");
     }
-    verify.push("Rodent species identification (mouse vs. rat) — determines device type and spacing.", "Entry points and structural deficiencies.", "Device placement against current product labels.");
+    recommended.push("Maintain the scheduled frequency through an initial evaluation period with a 60-day review; adjust frequency or placement only on documented findings and by mutual agreement.");
+    recommended.push("Keep exterior stations and interior trapping devices distinct in the scope; do not assume every station contains rodenticide.");
+    verify.push("Rodent species identification (mouse vs. rat): determines device type and spacing.", "Entry points and structural deficiencies.", "Device placement against current product labels.");
   }
 
   if (sv.has("german_cockroach")) {
@@ -81,6 +83,8 @@ export function recommendProgram(property: PropertyInfo, program: ServiceProgram
     assumptions.push("Occupied-unit access will be coordinated by management with resident notice.");
     verify.push("Number and severity of affected units.", "Resident access and preparation requirements.");
     if (!freq && (property.activityLevel === "high" || property.activityLevel === "severe")) freq = { kind: "biweekly" };
+    if (property.activityLevel === "severe" && affected >= 20) recommended.push(`For ${affected} affected units, consider an intensive five-day-per-week program with a defined daily apartment allocation and weekly capacity before transitioning to routine rotation.`);
+    recommended.push("Define how scheduled visits, post-treatment follow-ups, callbacks and additional billable treatments differ.");
   }
 
   if (sv.has("fly") || sv.has("drain")) {
@@ -95,15 +99,27 @@ export function recommendProgram(property: PropertyInfo, program: ServiceProgram
     verify.push("Unit bedroom counts and preparation readiness.");
   }
   if (sv.has("mosquito")) recommended.push("Seasonal scheduling during the active months with source-reduction recommendations each visit.");
-  if (sv.has("wildlife")) verify.push("Legal review of wildlife methods under applicable state regulations.");
-  if (sv.has("bird")) verify.push("Confirm species and any protections before recommending deterrents.");
+  if (sv.has("wildlife")) {
+    verify.push("Legal review of wildlife methods under applicable federal, state and local regulations, and confirm the servicing branch can perform them.");
+    recommended.push("Do not represent capture, relocation or lethal control as available until legality and capability are verified.");
+  }
+  if (sv.has("bird")) {
+    recommended.push("Prefer nonlethal deterrence (e.g. Flock Free or Goose Scram where appropriate); goose roundup and relocation are not offered; nest or egg management alone is not a long-term strategy.");
+    recommended.push("Price bird deterrence subject to inspection.");
+    verify.push("Confirm species and legal protections before recommending deterrents or nest-related work.");
+  }
+  if (sv.has("sewer_baiting")) recommended.push("Distinguish sewer baiting from above-ground stations and define service boundaries and city-owned property.");
+  if (sv.has("consulting")) recommended.push("Define deliverables (kickoff, assessment, interim findings, draft and final report); advisory work does not include treatment unless listed.");
 
   if (property.model === "multifamily") {
     if (!program.apartmentsPerVisit) assumptions.push("Apartments per visit not yet set — use the rotation planner to derive it from unit count, cycle and frequency.");
     recommended.push("Rotation structured so each apartment is scheduled within the agreed cycle, with common-area service each visit.");
   }
   if (property.model === "healthcare") recommended.push("Product selection and timing coordinated around sensitive populations and infection-control procedures.");
-  if (property.model === "government") recommended.push("Service records formatted for procurement and oversight review; confirm security/escort procedures.");
+  if (property.model === "government") {
+    recommended.push("Service records formatted for procurement and oversight review; confirm security/escort procedures.");
+    recommended.push("Build the RFP requirements matrix first; follow the requested pricing format and itemize totals only where procurement requires them.");
+  }
   if (property.model === "restaurant") recommended.push("Service timed outside peak operations; sanitation findings prioritized for the kitchen manager.");
 
   return {

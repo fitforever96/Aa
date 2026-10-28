@@ -70,8 +70,8 @@ export const SERVICE_COPY: Record<ServiceCategory, ServiceCopy> = {
     coverageTitle: "Bed Bugs",
     card: "Inspection-driven treatment of confirmed activity with preparation and follow-up coordinated with management.",
     methodology:
-      "Bed bug service begins with confirmation of activity. Treatment of affected units follows a documented plan with preparation guidance, targeted applications according to product labels and follow-up inspection to verify results. Adjacent units are inspected where the treatment plan calls for it.",
-    objective: "Confirm and eliminate active bed bug infestations while limiting spread to adjoining areas.",
+      "Bed bug service begins with confirmation of activity. Treatment of affected units follows a documented plan with preparation guidance, targeted applications according to product labels and follow-up inspection to evaluate results. Adjacent units are inspected where the treatment plan calls for it. Scheduled service visits, post-treatment follow-ups, included callbacks and additional billable treatments are defined separately in the agreement.",
+    objective: "Confirm activity, treat affected units according to a documented plan and limit spread to adjoining areas, with follow-up inspection to evaluate results.",
     responsibilities: ["Complete unit preparation according to the provided checklist.", "Provide access for treatment and follow-up visits."],
     exclusions: ["Replacement of furniture, mattresses or personal belongings is not included."],
     verification: ["Confirm activity before treatment.", "Confirm unit size/bedroom count for pricing."],
@@ -80,7 +80,7 @@ export const SERVICE_COPY: Record<ServiceCategory, ServiceCopy> = {
     coverageTitle: "Canine Bed Bug Inspections",
     card: "Scent-detection inspections to screen rooms or units and focus confirmation where alerts occur.",
     methodology:
-      "Canine inspections screen designated rooms or units efficiently. Alerts are followed by visual confirmation before any treatment is recommended, so treatment is directed to confirmed activity.",
+      "Canine inspections screen designated rooms or units efficiently. A canine inspection is a detection service, not a treatment. Alerts are followed by visual confirmation before any treatment is recommended, so treatment is directed to confirmed activity.",
     objective: "Screen large inventories of rooms or units quickly and target confirmation and treatment precisely.",
     responsibilities: ["Provide room/unit access lists and escort as required.", "Minimize cleaning chemicals and strong odors in inspection areas on inspection day."],
     exclusions: ["Treatment following an inspection is quoted separately unless expressly included."],
@@ -90,8 +90,8 @@ export const SERVICE_COPY: Record<ServiceCategory, ServiceCopy> = {
     coverageTitle: "Bed Bug Heat Treatment",
     card: "Whole-room heat treatment for confirmed infestations, with preparation and post-treatment verification.",
     methodology:
-      "Heat treatment raises room temperatures to levels lethal to bed bugs throughout the treated space. Treatment requires preparation, temperature monitoring during treatment and follow-up inspection.",
-    objective: "Eliminate confirmed bed bug activity in treated rooms in a single coordinated treatment event.",
+      "Heat treatment raises room temperatures to levels lethal to bed bugs throughout the treated space. Results depend on preparation, temperature monitoring during treatment and follow-up inspection; repeat treatment criteria are defined in the service plan.",
+    objective: "Address confirmed bed bug activity in treated rooms through a coordinated heat treatment with post-treatment inspection to evaluate results.",
     responsibilities: ["Remove heat-sensitive items per the preparation checklist.", "Provide electrical access as specified."],
     exclusions: ["Damage to heat-sensitive items not removed per preparation guidance is excluded."],
     verification: ["Confirm power availability and room count."],
@@ -112,7 +112,7 @@ export const SERVICE_COPY: Record<ServiceCategory, ServiceCopy> = {
     methodology:
       "Mosquito service combines inspection for standing water and breeding sites with targeted treatment of resting vegetation and larval habitat where labels allow. Source-reduction recommendations are documented each visit.",
     objective: "Reduce mosquito activity in occupied outdoor areas during the active season.",
-    responsibilities: ["Eliminate standing water identified in service reports."],
+    responsibilities: ["Address standing water and breeding sites identified in service reports."],
     exclusions: [],
     verification: ["Confirm treatment area square footage and sensitive areas (water bodies, gardens)."],
   },
@@ -120,7 +120,7 @@ export const SERVICE_COPY: Record<ServiceCategory, ServiceCopy> = {
     coverageTitle: "Flies",
     card: "Source identification, sanitation findings and appropriate control for filth and small flies.",
     methodology:
-      "Fly management starts with locating breeding sources — drains, waste areas, organic buildup and moisture. Control combines source-reduction recommendations, drain treatments where needed and properly placed fly-management equipment away from food exposure.",
+      "Fly management starts with locating breeding sources: drains, waste areas, organic buildup and moisture. Control combines source-reduction recommendations, drain treatments where needed and properly placed fly-management equipment away from food exposure. Light traps support monitoring and capture; they do not resolve the breeding source.",
     objective: "Identify and reduce fly breeding sources and limit adult activity in sensitive areas.",
     responsibilities: ["Maintain drains, waste areas and floor-wall junctions per sanitation recommendations."],
     exclusions: [],
@@ -147,7 +147,7 @@ export const SERVICE_COPY: Record<ServiceCategory, ServiceCopy> = {
   bird: {
     coverageTitle: "Birds",
     card: "Assessment of roosting and nesting activity with recommendations for deterrent solutions.",
-    methodology: "Bird service begins with an assessment of roosting, nesting and loafing areas. Deterrent and exclusion options are recommended and quoted separately based on the structure.",
+    methodology: "Bird service begins with an assessment of roosting, nesting and loafing areas and the species involved. Nonlethal deterrent and exclusion options are recommended where appropriate and are priced after inspection. Species-specific legal protections are confirmed before any nest-related work.",
     objective: "Reduce bird activity at entrances, docks and building features.",
     responsibilities: ["Provide lift or roof access where required."],
     exclusions: ["Deterrent installation is quoted separately unless expressly included."],
@@ -156,7 +156,7 @@ export const SERVICE_COPY: Record<ServiceCategory, ServiceCopy> = {
   wildlife: {
     coverageTitle: "Wildlife",
     card: "Assessment of wildlife activity and entry points, with services scoped to applicable regulations.",
-    methodology: "Wildlife-related services are scoped after an on-site assessment. Methods are selected only where permitted by applicable state and local regulations.",
+    methodology: "Wildlife-related services are scoped after an on-site assessment. Methods are selected only where permitted by applicable federal, state and local regulations and where the servicing branch can perform them; capture, relocation or nest work is not assumed.",
     objective: "Address wildlife activity at the structure within applicable regulations.",
     responsibilities: ["Provide access to attics, crawl spaces and roof areas as needed."],
     exclusions: ["Wildlife methods are subject to applicable law and may require separate authorization."],
@@ -229,7 +229,7 @@ export const SERVICE_COPY: Record<ServiceCategory, ServiceCopy> = {
     coverageTitle: "Fleas",
     card: "Targeted treatment of affected units with preparation guidance.",
     methodology: "Flea treatment targets affected units and resting areas with preparation guidance and coordination of pet treatment by the owner.",
-    objective: "Eliminate flea activity in affected units.",
+    objective: "Reduce flea activity in affected units, with follow-up evaluated according to the treatment plan.",
     responsibilities: ["Ensure pets are treated by a veterinarian; complete preparation."],
     exclusions: [],
     verification: ["Confirm affected units."],

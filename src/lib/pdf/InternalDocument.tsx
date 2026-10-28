@@ -106,6 +106,16 @@ export function InternalEstimateDocument({ m }: { m: InternalModel }) {
         <Text style={{ fontSize: 8.5, lineHeight: 1.5 }}>
           Labor {formatMoney(p.assumptions.laborRateCentsPerHour)}/hr (confirmed) · Tin Cat {p.assumptions.tinCatServiceMinutes} min (confirmed) · Exterior bait station {p.assumptions.baitStationServiceMinutes} min (confirmed) · Initial inspection ×{p.assumptions.initialInspectionMultiplier} · Floor transition {p.assumptions.perFloorTransitionMinutes} min · Access multipliers {JSON.stringify(p.assumptions.accessMultipliers)} · Activity multipliers {JSON.stringify(p.assumptions.activityMultipliers)} · Parallel fractions {JSON.stringify(p.assumptions.parallelFractions)}. All non-confirmed values are app-generated planning estimates.
         </Text>
+        {(p.rfpRequirements?.length ?? 0) > 0 && (
+          <>
+            <Text style={S.h}>RFP requirements matrix</Text>
+            {p.rfpRequirements!.map((r) => (
+              <Text key={r.id} style={{ fontSize: 8.5, marginBottom: 2, color: r.status === "cannot_perform" || (r.mandatory && r.status === "open") ? C.red : C.ink2 }}>
+                [{r.status.replace("_", " ").toUpperCase()}{r.mandatory ? " · MANDATORY" : ""}] {r.requirement}{r.response ? ` → ${r.response}` : ""}
+              </Text>
+            ))}
+          </>
+        )}
         {m.qcIssues.length > 0 && (
           <>
             <Text style={S.h}>Open QC items</Text>

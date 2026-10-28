@@ -473,16 +473,7 @@ function SectionBody({ s, m }: { s: ProposalSection; m: PdfModel }) {
       return (
         <View>
           <Text style={[S.small, { marginBottom: 10 }]}>{s.body}</Text>
-          {s.items[0] && (
-            <View {...nw} style={{ backgroundColor: C.dark, borderRadius: 4, padding: 14, flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
-              <Text style={{ fontFamily: "RobotoCondensed", fontWeight: 700, fontSize: 26, color: C.white, width: 120 }}>2 × 24</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: "RobotoCondensed", fontWeight: 700, fontSize: 13, color: C.mint, textTransform: "uppercase", marginBottom: 3 }}>{s.items[0].title}</Text>
-                <Text style={{ fontSize: 9.5, color: C.white, lineHeight: 1.45 }}>{s.items[0].body}</Text>
-              </View>
-            </View>
-          )}
-          <CardGrid items={s.items.slice(1)} cols={2} />
+          <CardGrid items={s.items} cols={3} />
           {!!s.callout && <Text style={[S.small, { marginTop: 10, fontWeight: 700, textTransform: "uppercase" }]}>{s.callout}</Text>}
         </View>
       );

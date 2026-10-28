@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { callJSON, errorResponse, guard, readJson } from "@/server/ai";
+import { PLANNING_STANDARD } from "@/server/prompts";
 
 export const runtime = "nodejs";
 export const maxDuration = 180;
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
   try {
     guard(req);
     const body = await readJson(req, Body);
-    const out = await callJSON({ system: SYSTEM, content: JSON.stringify(body.facts), schema: Out, effort: "medium", maxTokens: 8000 });
+    const out = await callJSON({ system: `${SYSTEM}\n\n${PLANNING_STANDARD}`, content: JSON.stringify(body.facts), schema: Out, effort: "medium", maxTokens: 8000 });
     return Response.json(out);
   } catch (e) {
     return errorResponse(e);

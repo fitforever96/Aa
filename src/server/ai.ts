@@ -91,7 +91,8 @@ export async function callJSON<T>(opts: { system: string; content: string | Cont
   const stream = client().beta.messages.stream({
     model: MODEL,
     max_tokens: opts.maxTokens ?? 16000,
-    system: opts.system,
+    // Long, stable system prompt (master memory) is cached across requests.
+    system: [{ type: "text", text: opts.system, cache_control: { type: "ephemeral" } }],
     messages: [{ role: "user", content: opts.content }],
     output_config: { effort: opts.effort ?? "medium", format: { type: "json_schema", schema: jsonSchema } },
     betas: ["server-side-fallback-2026-07-01"],

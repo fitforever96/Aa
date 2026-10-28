@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { callJSON, errorResponse, guard, readJson } from "@/server/ai";
+import { PLANNING_STANDARD } from "@/server/prompts";
 import { OpSchema } from "@/lib/commands/schema";
 
 export const runtime = "nodejs";
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
   try {
     guard(req);
     const body = await readJson(req, Body);
-    const out = await callJSON({ system: SYSTEM, content: `Current proposal summary: ${JSON.stringify(body.summary)}\n\nInstruction: ${body.command}`, schema: Out, effort: "low", maxTokens: 8000 });
+    const out = await callJSON({ system: `${SYSTEM}\n\n${PLANNING_STANDARD}`, content: `Current proposal summary: ${JSON.stringify(body.summary)}\n\nInstruction: ${body.command}`, schema: Out, effort: "low", maxTokens: 8000 });
     return Response.json(out);
   } catch (e) {
     return errorResponse(e);
