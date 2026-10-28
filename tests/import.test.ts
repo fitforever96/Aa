@@ -5,7 +5,7 @@ import { priceProgram } from "@/lib/engine/pricing";
 import { SEED_EQUIPMENT, SEED_CAPABILITIES } from "@/lib/seed";
 import { settings, version } from "./helpers";
 
-const SOURCE = `Prepared for: Hyundai Regional Office
+const SOURCE = `Prepared for: Sample Regional Office
 Site: 4500 Sample Parkway, Fountain Valley, CA 92708
 Attention: Jordan Lee
 Weekly service will be performed on a weekly basis and billed per completed visit.
@@ -15,12 +15,12 @@ Recurring weekly service: $150.00 per visit
 Bed bug treatment is excluded and quoted separately with written authorization.
 The customer shall maintain door sweeps and provide access to service areas.`;
 
-const ctx = { settings, version, catalog: SEED_EQUIPMENT, capabilities: SEED_CAPABILITIES, fileName: "hyundai.pdf", docId: null, fullText: SOURCE };
+const ctx = { settings, version, catalog: SEED_EQUIPMENT, capabilities: SEED_CAPABILITIES, fileName: "sample.pdf", docId: null, fullText: SOURCE };
 
 describe("Source document import", () => {
   it("extracts customer, address, frequency, equipment, charges, exclusions — all unconfirmed", () => {
     const x = extractFromText(SOURCE, "pdf_text");
-    expect(x.customer?.value).toMatch(/Hyundai/);
+    expect(x.customer?.value).toMatch(/Sample/);
     expect(x.address?.value).toMatch(/Fountain Valley, CA 92708/);
     expect(x.frequencies.map((f) => f.value)).toContain("Weekly");
     expect(x.equipment.some((e) => /tin cat/i.test(e.value.name) && e.value.quantity === 24)).toBe(true);
@@ -45,7 +45,7 @@ describe("Source document import", () => {
     x.charges.filter((c) => c.value.cents === 45000 || c.value.cents === 15000).forEach((c) => (c.confirmed = true));
     x.exclusions.forEach((e) => (e.confirmed = true));
     const p = proposalFromExtraction(x, "redesign", ctx);
-    expect(p.customer.name).toMatch(/Hyundai/);
+    expect(p.customer.name).toMatch(/Sample/);
     expect(p.property.address.zip).toBe("92708");
     const r = priceProgram(p, p.programs[0]);
     expect(r.recurring!.finalCents).toBe(15000);
@@ -66,7 +66,7 @@ describe("Source document import", () => {
   it("historical import is labeled unverified and customer-specific", () => {
     const x = extractFromText(SOURCE, "pdf_text");
     x.charges.forEach((c) => (c.confirmed = true));
-    const rows = historicalFromExtraction(x, "hyundai.pdf", "Hyundai");
+    const rows = historicalFromExtraction(x, "sample.pdf", "Sample");
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.every((r) => r.status === "unverified_extracted")).toBe(true);
   });

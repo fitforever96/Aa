@@ -9,7 +9,7 @@ import { roundCents } from "./money";
  *
  * Planned visits per month uses the guaranteed minimum (weekly = 4, twice monthly = 2)
  * so that the monthly rotation minimum is still met in four-visit months. This mirrors
- * the structure of the historical NRP portfolio schedules.
+ * the structure of prior portfolio schedules.
  */
 export function plannedVisitsPerMonth(f: FrequencySpec): number {
   switch (f.kind) {

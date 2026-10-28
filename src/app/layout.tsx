@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppShell } from "@/components/shell/AppShell";
+import { withBase } from "@/lib/base";
 
 export const metadata: Metadata = {
   title: "Orkin Proposal Studio",
@@ -8,7 +9,8 @@ export const metadata: Metadata = {
   applicationName: "Proposal Studio",
   appleWebApp: { capable: true, title: "Proposal Studio", statusBarStyle: "black-translucent" },
   formatDetection: { telephone: false },
-  icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
+  icons: { icon: withBase("/icons/icon-192.png"), apple: withBase("/icons/apple-touch-icon.png") },
+  manifest: withBase("/manifest.webmanifest"),
   robots: { index: false, follow: false },
 };
 

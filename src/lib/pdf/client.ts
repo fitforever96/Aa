@@ -4,12 +4,13 @@ import type { Asset, HistoricalPrice, Proposal } from "../types";
 import type { PdfQAResult } from "../qc";
 import { buildPdfModel } from "./model";
 import { buildInternalModel } from "./internalModel";
+import { withBase } from "../base";
 
 /** Client-side PDF generation (works offline). Heavy libraries load on demand. */
 
 async function renderer() {
   const [r, doc] = await Promise.all([import("@react-pdf/renderer"), import("./ProposalDocument")]);
-  doc.registerPdfFonts(window.location.origin);
+  doc.registerPdfFonts(window.location.origin + withBase(""));
   return { r, doc };
 }
 
@@ -34,7 +35,7 @@ let pdfjsPromise: Promise<typeof import("pdfjs-dist")> | null = null;
 export function loadPdfjs() {
   if (!pdfjsPromise)
     pdfjsPromise = import("pdfjs-dist").then((m) => {
-      m.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+      m.GlobalWorkerOptions.workerSrc = withBase("/pdf.worker.min.mjs");
       return m;
     });
   return pdfjsPromise;

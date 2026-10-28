@@ -8,6 +8,7 @@ import { BookOpen, Calculator, FolderOpen, Home, Plus, Settings as Cog, WifiOff 
 import { ToastProvider } from "./Toast";
 import { useOnline, useSeeded, useSettings } from "@/lib/client";
 import { Wordmark } from "../ui";
+import { withBase } from "@/lib/base";
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: Home },
@@ -48,7 +49,15 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
+      navigator.serviceWorker
+        .register(withBase("/sw.js"), { scope: withBase("/") })
+        .then(() => navigator.serviceWorker.ready)
+        .then((reg) => {
+          // Hand already-loaded scripts, styles and fonts to the worker so the app opens offline.
+          const urls = [window.location.href, ...performance.getEntriesByType("resource").map((e) => e.name)];
+          reg.active?.postMessage({ type: "cache-urls", urls });
+        })
+        .catch(() => {});
     }
   }, []);
 

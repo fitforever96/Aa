@@ -10,3 +10,4 @@ next-env.d.ts
 coverage
 /tmp-qa
 tmp-qa
+.pages-tmp

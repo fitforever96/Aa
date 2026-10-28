@@ -27,9 +27,9 @@ describe("Persistence", () => {
     const s = await getSettings(d);
     expect(s.profile.name).toBe("Anthony Acosta");
     expect((await activeAssumptionVersion(d)).assumptions.laborRateCentsPerHour).toBe(21000);
-    expect(await d.historical.count()).toBeGreaterThan(15);
+    expect(await d.historical.count()).toBe(0); // confidential history ships only in the private data pack
     const tin = await d.equipment.get("eq_tin_cat");
-    expect(tin!.unitPriceCents).toBeNull(); // GM $20 is historical, not applied
+    expect(tin!.unitPriceCents).toBeNull(); // historical prices are never applied
   });
   it("proposals survive a new connection (page refresh)", async () => {
     const p = await makeProposal();
@@ -73,6 +73,18 @@ describe("Versioning", () => {
     const a = withStatus(p, "approved");
     expect(a.approvedSnapshot).not.toBeNull();
     expect(Object.keys(a.approvedSnapshot!.prices).length).toBeGreaterThan(0);
+  });
+});
+
+describe("Private data pack", () => {
+  it("merges historical records and a knowledge document without touching proposals or settings", async () => {
+    await makeProposal();
+    const before = await getSettings(d);
+    const pack = { format: "orkin-proposal-studio-backup", version: 1, data: { historical: [{ id: "hist_x", customer: "Sample", program: "P", category: "Commercial", description: "", priceCents: 15000, priceHighCents: null, basis: "per visit", frequency: "Weekly", status: "customer_specific", source: "pack", version: "", effectiveDate: null, notes: "", tags: [], metrics: {} }], knowledge: [{ id: "doc_mm", name: "Standards", mime: "text/plain", size: 1, uploadedAt: "x", text: "t", chunks: [], facts: [], extractionMethod: "plain_text", notes: "" }] } };
+    const r = await importBackup(pack, "merge", d);
+    expect(r.counts.historical).toBe(1);
+    expect(await d.proposals.count()).toBe(1);
+    expect((await getSettings(d)).profile.name).toBe(before.profile.name);
   });
 });
 

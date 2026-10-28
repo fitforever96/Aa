@@ -125,7 +125,7 @@ export default function SettingsPage() {
 
         <SectionTitle>Writing standards</SectionTitle>
         <Card className="space-y-2 text-[13.5px] leading-relaxed text-ink2">
-          <p><b className="text-ink">Master memory applied.</b> Your Orkin proposal-development master memory governs AI writing, recommendations and command interpretation (server-side; it is not sent to the browser). Its rules are also built into the offline writer and quality control:</p>
+          <p><b className="text-ink">Master memory applied.</b> Your Orkin proposal-development master memory governs AI writing, recommendations and command interpretation when the server is configured with it (MASTER_MEMORY environment variable; never sent to the browser). Its rules are also built into the offline writer and quality control:</p>
           <ul className="list-inside list-disc space-y-0.5 text-[13px] text-ink3">
             <li>No hour-specific response promises (the rejected 24-hour on-site language is blocked everywhere)</li>
             <li>No eradication, compliance, refund or unlimited-service promises; no National Accounts claims for multistate work</li>
@@ -136,7 +136,7 @@ export default function SettingsPage() {
             <li>RFP requirements matrix for government and procurement proposals</li>
             <li>Plain, direct style: no buzzwords, excessive em dashes or exclamation marks</li>
           </ul>
-          <p className="text-[12px] text-ink3">Project precedents (NRP structure, GM rebate, Dearborn, Wayne County, U-M, price protection) are in Knowledge › Historical pricing as customer-specific references.</p>
+          <p className="text-[12px] text-ink3">Your historical pricing and project precedents are customer-confidential, so they are not part of the published app. Import your private data pack (Restore › Merge) to load them on this device.</p>
         </Card>
 
         <SectionTitle>AI & research</SectionTitle>
@@ -154,6 +154,7 @@ export default function SettingsPage() {
           </Callout>
         </Card>
 
+        <div id="backup" />
         <SectionTitle>Backup & restore</SectionTitle>
         <Card className="space-y-3">
           <div className="text-[13px] text-ink3">{counts ? `${counts.proposals} proposals · ${counts.docs} knowledge documents · ${counts.assets} images on this device` : ""}</div>

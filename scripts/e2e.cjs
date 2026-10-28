@@ -9,7 +9,7 @@ const out = process.argv[2] || "tmp-qa/e2e";
   p.on("dialog", (d) => { console.log("DIALOG:", d.message().slice(0, 120)); d.accept(); });
   p.on("pageerror", (e) => errors.push("pageerror: " + e.message));
   p.on("console", (m) => m.type() === "error" && errors.push("console: " + m.text()));
-  const base = "http://localhost:3100";
+  const base = process.env.E2E_BASE || "http://localhost:3100";
   const shot = (n) => p.screenshot({ path: `${out}/${n}.png` });
   await p.goto(base + "/");
   await p.waitForSelector("button:has-text('New Proposal')");

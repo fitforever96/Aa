@@ -86,10 +86,8 @@ describe("Master memory: rotation arithmetic", () => {
 });
 
 describe("Master memory: precedents & RFP", () => {
-  it("seeds project-specific precedents without prices", () => {
-    const ids = SEED_HISTORICAL.map((h) => h.id);
-    for (const id of ["hist_gm_rebate", "hist_dearborn", "hist_wayne", "hist_umich", "hist_nrp_structure", "hist_price_protect"]) expect(ids).toContain(id);
-    expect(SEED_HISTORICAL.find((h) => h.id === "hist_gm_rebate")!.status).toBe("customer_specific");
+  it("confidential history is not shipped in public source", () => {
+    expect(SEED_HISTORICAL).toEqual([]);
   });
   it("government proposals require a requirements matrix with mandatory items addressed", () => {
     const p = proposalWith(deviceProgram(10, 10));

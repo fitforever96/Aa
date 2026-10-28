@@ -231,7 +231,7 @@ describe("Frequency & billing", () => {
 });
 
 describe("Multifamily rotation", () => {
-  it("reproduces NRP schedule structure", () => {
+  it("reproduces prior portfolio schedule structure", () => {
     expect(planRotation(340, 12, { kind: "weekly" })).toMatchObject({ rotationPerMonth: 29, aptsPerVisit: 8 });
     expect(planRotation(299, 12, { kind: "twice_monthly" })).toMatchObject({ rotationPerMonth: 25, aptsPerVisit: 13 });
     expect(planRotation(202, 3, { kind: "weekly" })).toMatchObject({ rotationPerMonth: 68, aptsPerVisit: 17 });

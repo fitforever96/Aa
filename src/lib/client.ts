@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, ensureSeeded } from "./db";
 import type { Settings } from "./types";
+import { STATIC_BUILD, withBase } from "./base";
 
 export function useSettings(): Settings | undefined {
   return useLiveQuery(() => db().settings.get("settings"), []);
@@ -22,7 +23,12 @@ export function useAIStatus(): AIStatus | null {
   const [s, setS] = useState<AIStatus | null>(statusCache);
   useEffect(() => {
     if (statusCache) return;
-    fetch("/api/ai/status")
+    if (STATIC_BUILD) {
+      statusCache = { configured: false, model: null, passcodeRequired: false, research: false, reachable: true };
+      setS(statusCache);
+      return;
+    }
+    fetch(withBase("/api/ai/status"))
       .then((r) => r.json())
       .then((j) => {
         statusCache = { ...j, reachable: true };
@@ -39,7 +45,8 @@ export class AIError extends Error {}
 export async function aiFetch<T>(path: string, body: unknown, settings: Settings | undefined): Promise<T> {
   if (!settings?.ai.consent) throw new AIError("AI features are off. Enable “Allow sending proposal content to the AI provider” in Settings › AI & Research.");
   if (typeof navigator !== "undefined" && !navigator.onLine) throw new AIError("You are offline. AI and research features need a connection; everything else keeps working.");
-  const res = await fetch(path, {
+  if (STATIC_BUILD) throw new AIError("This installed version runs fully on your phone without a server, so AI features are unavailable. Everything else works.");
+  const res = await fetch(withBase(path), {
     method: "POST",
     headers: { "content-type": "application/json", ...(settings.ai.accessToken ? { "x-studio-token": settings.ai.accessToken } : {}) },
     body: JSON.stringify(body),

@@ -19,6 +19,7 @@ export default function Dashboard() {
   const toast = useToast();
   const settings = useSettings();
   const proposals = useLiveQuery(() => db().proposals.orderBy("updatedAt").reverse().toArray(), []);
+  const historicalCount = useLiveQuery(() => db().historical.count(), []);
   const first = settings?.profile.name.split(" ")[0] ?? "";
   const hour = new Date().getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -83,6 +84,16 @@ export default function Dashboard() {
             <span className="text-[13px] font-semibold leading-tight">Import proposal</span>
           </Link>
         </div>
+
+        {historicalCount === 0 && (
+          <Link href="/settings#backup" className="card mt-3 flex items-center gap-3 border-warn/30 p-4">
+            <FileUp size={20} className="shrink-0 text-warn" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-[14px] font-semibold">Load your private data pack</span>
+              <span className="block text-[12.5px] text-ink3">Historical pricing and precedents are kept out of the public app. Settings › Restore from backup › Merge.</span>
+            </span>
+          </Link>
+        )}
 
         <div className="mt-6 grid grid-cols-3 gap-2.5">
           {[

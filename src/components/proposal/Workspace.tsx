@@ -40,7 +40,7 @@ export function Workspace() {
     update((d) => void (d.wizardStep = s));
     const u = new URL(window.location.href);
     u.searchParams.set("step", String(s));
-    router.replace(u.pathname + u.search, { scroll: false });
+    router.replace(`/proposal${u.search}`, { scroll: false });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 

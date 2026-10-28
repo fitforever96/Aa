@@ -7,7 +7,7 @@ import type { ProposalSection } from "../types";
 /**
  * Premium customer-facing proposal PDF. Vector text (searchable/selectable),
  * embedded fonts, repeating table headers, rows that never split, fixed headers
- * and footers with page numbers. Layout language follows the NRP reference:
+ * and footers with page numbers. Layout language follows the reference proposal:
  * Roboto Condensed display type, Lato body, Orkin red accents, charcoal panels.
  */
 
