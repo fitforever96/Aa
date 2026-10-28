@@ -43,19 +43,22 @@ export function storyFacts(p: Proposal, sections: ProposalSection[]) {
 }
 
 const MONEY = /\$\s?\d|\b\d[\d,]*(?:\.\d{2})?\s?(?:dollars|USD)\b/i;
-/** Drop any sentence that states an amount: prices come only from the pricing engine. */
-const noMoney = (t: string) => (MONEY.test(t) ? sentences(t).filter((s) => !MONEY.test(s)).join(" ") : t);
+const AMOUNTS = /\$\s?([\d,]+(?:\.\d{1,2})?)|\b([\d,]+(?:\.\d{2})?)\s?(?:dollars|USD)\b/gi;
+/** A sentence may keep its amounts only when every one of them is an amount Anthony stated. */
+const statedOnly = (s: string, allowed?: Set<number>) => !!allowed && [...s.matchAll(AMOUNTS)].every((m) => allowed.has(Math.round(Number((m[1] ?? m[2]).replace(/,/g, "")) * 100)));
+/** Drop any sentence that states an amount Anthony didn't: prices come from the pricing engine. */
+const noMoney = (t: string, allowed?: Set<number>) => (MONEY.test(t) ? sentences(t).filter((s) => !MONEY.test(s) || statedOnly(s, allowed)).join(" ") : t);
 
 /**
  * Turn Claude's draft into a safe Story: price keys become engine references, any
  * amount written in prose is removed, and approved scope pricing, terms, guarantee
  * wording, schedules and the price summary come from the rules story.
  */
-export function finalizeAIStory(out: StoryOutput, p: Proposal, sections: ProposalSection[]): Story {
+export function finalizeAIStory(out: StoryOutput, p: Proposal, sections: ProposalSection[], allowed?: Set<number>): Story {
   const rules = composeStory(p, sections);
   const keys = new Map(priceKeys(p).map((k) => [k.key, k.ref]));
   const blocks: StoryBlock[] = [];
-  const clean = <T,>(v: T): T => JSON.parse(JSON.stringify(v), (_k, x) => (typeof x === "string" ? noMoney(x) : x));
+  const clean = <T,>(v: T): T => JSON.parse(JSON.stringify(v), (_k, x) => (typeof x === "string" ? noMoney(x, allowed) : x));
   for (const raw of out.blocks) {
     const b = clean(raw);
     if (b.kind === "scope") blocks.push({ kind: "scope", priority: b.priority, cards: b.cards.map((c) => ({ eyebrow: c.eyebrow, title: c.title, price: keys.get(c.priceKey) ?? null, priceSuffix: c.priceSuffix, bullets: c.bullets })) });
@@ -78,7 +81,8 @@ export function finalizeAIStory(out: StoryOutput, p: Proposal, sections: Proposa
   const fromRules = rules.blocks.filter((b) => b.kind === "schedules" || b.kind === "twoLists" || b.kind === "priceStrip" || (b.kind === "callout" && b.priority === 1));
   const next = rules.blocks[rules.blocks.length - 1];
   const research = p.research.filter((r) => r.status === "accepted" && r.sources.length);
-  const tail: StoryBlock[] = [...fromRules, ...(next?.kind === "paragraph" ? [next] : [])];
+  const hasNext = body.some((b) => b.kind === "paragraph" && /\bnext step\b/i.test(b.text));
+  const tail: StoryBlock[] = [...fromRules, ...(next?.kind === "paragraph" && !hasNext ? [next] : [])];
   if (research.length) tail.push({ kind: "sources", priority: 3, items: research.flatMap((r) => r.sources.map((s) => `${s.title}: ${s.url}`)).slice(0, 6) });
   const h = clean(out.hero);
   return {

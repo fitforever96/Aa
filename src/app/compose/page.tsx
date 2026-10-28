@@ -98,6 +98,7 @@ function Composer() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const sendRef = useRef<((retry?: { request: string; attachments: PreparedAttachment[] }, opts?: { soundPlayed?: boolean }) => Promise<void>) | null>(null);
   useEffect(() => prepareBuildSounds(), []);
+  useWakeLock(busy);
 
   const chat = useMemo(() => proposal?.chat ?? [], [proposal?.chat]);
   const lastAssistant = [...chat].reverse().find((t) => t.role === "assistant");
@@ -109,18 +110,19 @@ function Composer() {
     return () => clearTimeout(t);
   }, [chat.length, busy, failed]);
 
-  const send = async (retry?: { request: string; attachments: PreparedAttachment[] }, opts: { soundPlayed?: boolean } = {}) => {
+  const send = async (retry?: { request: string; attachments: PreparedAttachment[] }, opts: { soundPlayed?: boolean; local?: boolean } = {}) => {
     if (busy) return;
     const typed = draft.trim();
     const request = retry?.request ?? (answering && typed ? `Answering your question "${answering}": ${typed}` : typed || (files.length ? "Build the proposal from the attached files." : ""));
     const attachments = retry?.attachments ?? files;
     if (!request) return;
     const first = !proposal;
+    const withAI = useAI && !opts.local;
     // Sounds must start inside the tap for iPhone to allow them later.
     if (first) {
       if (!opts.soundPlayed) playBuildStart();
     } else unlockBuildSounds();
-    const steps = stepsFor(useAI, first, useAI && wantsLookup(request, first));
+    const steps = stepsFor(withAI, first, withAI && wantsLookup(request, first));
     setFailed(null);
     setDraft("");
     setFiles([]);
@@ -129,7 +131,7 @@ function Composer() {
     setFreshSince(Date.now() - 1000);
     if (first) {
       setChips(briefChips(request));
-      setLog(composeLog(request, useAI, length, { attachments: attachments.length, memoryWords: useAI ? memoryWords : 0 }));
+      setLog(composeLog(request, withAI, length, { attachments: attachments.length, memoryWords: withAI ? memoryWords : 0 }));
       setBuildDone(false);
     }
     // Each step stays on screen long enough to read, even when it finishes instantly.
@@ -146,7 +148,7 @@ function Composer() {
       });
     };
     try {
-      const r = await composeTurn({ proposalId: proposal?.id ?? null, request, attachments, useAI, length, onStep: paced });
+      const r = await composeTurn({ proposalId: proposal?.id ?? null, request, attachments, useAI: withAI, length, onStep: paced });
       await chain;
       await new Promise((res) => setTimeout(res, Math.max(0, minMs - (performance.now() - last))));
       if (first) {
@@ -227,7 +229,7 @@ function Composer() {
 
   return (
     <>
-      {overlay && working && chips && <BuildSequence mode={useAI ? "ai" : "offline"} steps={working.steps} current={working.step} done={buildDone} chips={chips} log={log} onFinished={finishBuild} />}
+      {overlay && working && chips && <BuildSequence mode={working.steps.some((x) => x.key === "apply") ? "ai" : "offline"} steps={working.steps} current={working.step} done={buildDone} chips={chips} log={log} onFinished={finishBuild} />}
       <PageHeader
         vtTarget
         title={title}
@@ -290,9 +292,16 @@ function Composer() {
           {failed && (
             <AssistantShell label="ENGINE · FAULT" tone="red">
               <p className="text-[14.5px] leading-relaxed">{failed.message}</p>
-              <button className="btn-secondary mt-3 !py-2 text-[13.5px]" onClick={() => void send(failed)}>
-                <RotateCcw size={15} /> Try again
-              </button>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button className="btn-secondary !py-2 text-[13.5px]" onClick={() => void send(failed)}>
+                  <RotateCcw size={15} /> Try again
+                </button>
+                {useAI && (
+                  <button className="btn-ghost !py-2 text-[13.5px]" onClick={() => void send(failed, { local: true })}>
+                    Use the local engine instead
+                  </button>
+                )}
+              </div>
             </AssistantShell>
           )}
         </div>
@@ -990,4 +999,29 @@ function LengthMenu({ value, onChange, disabled }: { value: DocLength; onChange:
       )}
     </div>
   );
+}
+
+/** Keeps the screen on while Claude writes: iPhone drops the connection when the screen locks. */
+function useWakeLock(active: boolean) {
+  useEffect(() => {
+    if (!active) return;
+    type Sentinel = { release: () => Promise<void> };
+    const nav = navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<Sentinel> } };
+    let lock: Sentinel | null = null;
+    let done = false;
+    const take = () =>
+      nav.wakeLock
+        ?.request("screen")
+        .then((l) => (done ? void l.release() : (lock = l)))
+        .catch(() => {});
+    void take();
+    // The lock is released when the page is hidden; take it again on return.
+    const onVis = () => document.visibilityState === "visible" && void take();
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      done = true;
+      document.removeEventListener("visibilitychange", onVis);
+      void lock?.release().catch(() => {});
+    };
+  }, [active]);
 }

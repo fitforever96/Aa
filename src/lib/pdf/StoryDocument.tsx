@@ -253,18 +253,25 @@ function Block({ b, m, z, compact }: { b: StoryBlock; m: StoryModel; z: (n: numb
             ))}
         </View>
       );
-    case "priceStrip":
+    case "priceStrip": {
+      // Every price is shown: four to a row, rows stacked in one band.
+      const rows = Array.from({ length: Math.ceil(b.items.length / 4) }, (_, r) => b.items.slice(r * 4, r * 4 + 4));
       return (
-        <View wrap={false} style={{ flexDirection: "row", backgroundColor: K.red, borderRadius: 6, paddingVertical: z(11), marginBottom: gap, marginTop: 2 }}>
-          {b.items.map((it, i) => (
-            <View key={i} style={{ flex: 1, alignItems: "center", borderLeftWidth: i ? 0.6 : 0, borderLeftColor: "#E36C80", paddingHorizontal: 6 }}>
-              <Text style={{ fontFamily: F, fontWeight: 900, fontSize: z(6.2), color: K.white, letterSpacing: 0.25, textTransform: "uppercase", textAlign: "center" }}>{it.label}</Text>
-              <Text style={{ fontFamily: F, fontWeight: 900, fontSize: z(19), color: K.white, marginTop: 3 }}>{m.price(it.price) ?? "—"}</Text>
-              <Text style={{ fontSize: z(6.5), color: "#FFD3DA", marginTop: 2, textAlign: "center" }}>{it.caption}</Text>
+        <View wrap={false} style={{ backgroundColor: K.red, borderRadius: 6, paddingVertical: z(11), marginBottom: gap, marginTop: 2 }}>
+          {rows.map((row, r) => (
+            <View key={r} style={{ flexDirection: "row", borderTopWidth: r ? 0.6 : 0, borderTopColor: "#E36C80", paddingTop: r ? z(9) : 0, marginTop: r ? z(9) : 0 }}>
+              {row.map((it, i) => (
+                <View key={i} style={{ flex: 1, alignItems: "center", borderLeftWidth: i ? 0.6 : 0, borderLeftColor: "#E36C80", paddingHorizontal: 6 }}>
+                  <Text style={{ fontFamily: F, fontWeight: 900, fontSize: z(6.2), color: K.white, letterSpacing: 0.25, textTransform: "uppercase", textAlign: "center" }}>{it.label}</Text>
+                  <Text style={{ fontFamily: F, fontWeight: 900, fontSize: z(19), color: K.white, marginTop: 3 }}>{m.price(it.price) ?? "—"}</Text>
+                  <Text style={{ fontSize: z(6.5), color: "#FFD3DA", marginTop: 2, textAlign: "center" }}>{it.caption}</Text>
+                </View>
+              ))}
             </View>
           ))}
         </View>
       );
+    }
     case "schedules":
       return (
         <View style={{ marginBottom: gap }}>

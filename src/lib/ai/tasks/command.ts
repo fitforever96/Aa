@@ -23,7 +23,7 @@ const Intake = z.object({
   activityLevel: z.enum(["low", "moderate", "high", "severe"]).nullable(),
 });
 
-const Out = z.object({ ops: z.array(OpSchema), intake: Intake.nullable(), explanation: z.string() });
+export const Out = z.object({ ops: z.array(OpSchema), intake: Intake.nullable(), explanation: z.string() });
 
 const SYSTEM = `Translate Anthony's natural-language instruction for a commercial pest-control proposal into structured operations.
 - Use only the operation types in the schema. Do not invent values the user did not state.

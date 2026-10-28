@@ -181,13 +181,15 @@ export function composeStory(p: Proposal, sections: ProposalSection[]): Story {
     priority: 3,
   });
 
+  // Library wording written for apartment buildings reads oddly elsewhere.
+  const fitSite = (t: string) => (p.property.model === "multifamily" ? t : t.replace(/resident or occupant/gi, "occupant").replace(/units or areas/gi, "areas"));
   // ── Responsibilities and exclusions ──
   const resp = sec("customer_responsibilities");
   const excl = sec("exclusions");
   push({
     kind: "twoLists",
-    left: { title: "Customer responsibilities", items: resp ? [...bulletLines(resp.body), ...resp.items.map((i) => i.title)] : ["Provide access to scheduled service areas and a point of contact for each visit."] },
-    right: { title: "Not included", items: excl ? [...bulletLines(excl.body), ...excl.items.map((i) => i.title)] : [] },
+    left: { title: "Customer responsibilities", items: distinct(resp ? [...bulletLines(resp.body), ...resp.items.map((i) => i.title)].map(fitSite) : ["Provide access to scheduled service areas and a point of contact for each visit."]) },
+    right: { title: "Not included", items: distinct(excl ? [...bulletLines(excl.body), ...excl.items.map((i) => i.title)] : []) },
     priority: 1,
   });
 
@@ -200,7 +202,7 @@ export function composeStory(p: Proposal, sections: ProposalSection[]): Story {
     if (r.recurring) strip.push({ label: `${tag}${frequencyLabel(pr.frequency)} service`, price: { program: i, part: "recurring" }, caption: r.billing?.method === "fixed_monthly" && r.billing.fixedMonthlyCents != null ? "Per month" : "Per service visit" });
     if (r.equipment.lines.length && !r.equipment.unpriced.length && r.equipment.totalCents > 0) strip.push({ label: `${tag}Equipment`, price: { program: i, part: "equipment" }, caption: "One-time charge" });
   });
-  if (strip.length) push({ kind: "priceStrip", items: strip.slice(0, 4), priority: 1 });
+  if (strip.length) push({ kind: "priceStrip", items: strip, priority: 1 });
 
   // ── Next step ──
   const concl = sec("conclusion");
@@ -210,3 +212,18 @@ export function composeStory(p: Proposal, sections: ProposalSection[]): Story {
   return { hero: { ...hero, subtitle: cap(hero.subtitle) }, blocks: blocks.filter((b) => b.kind !== "paragraph" || b.text), source: "rules", updatedAt: new Date().toISOString() };
 }
 
+
+/** Drop list items that say nearly the same thing as an earlier one (several services share wording). */
+function distinct(items: string[]): string[] {
+  const words = (t: string) => new Set(t.toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/).filter((w) => w.length > 2));
+  const kept: { t: string; w: Set<string> }[] = [];
+  for (const t of items) {
+    const w = words(t);
+    const dup = kept.some((k) => {
+      const shared = [...w].filter((x) => k.w.has(x)).length;
+      return shared / new Set([...w, ...k.w]).size >= 0.6;
+    });
+    if (!dup) kept.push({ t, w });
+  }
+  return kept.map((k) => k.t);
+}

@@ -12,7 +12,7 @@ export const Body = z.object({
 
 const Field = <T extends z.ZodTypeAny>(t: T) => z.object({ value: t.nullable(), confidence: z.enum(["high", "medium", "low"]), evidence: z.string() });
 
-const Out = z.object({
+export const Out = z.object({
   customer: Field(z.string()),
   propertyName: Field(z.string()),
   address: Field(z.string()),

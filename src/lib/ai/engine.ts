@@ -25,7 +25,7 @@ type Content = Anthropic.Beta.Messages.BetaContentBlockParam[];
 export async function callJSON<T>(ctx: AICtx, opts: { system: string; content: string | Content; schema: z.ZodType<T>; maxTokens?: number; effort?: "low" | "medium" | "high" }): Promise<T> {
   const raw = z.toJSONSchema(opts.schema, { target: "draft-7" }) as Record<string, unknown>;
   delete raw.$schema;
-  // The SDK transformer moves unsupported constraints (lengths, ranges…) into descriptions; zod still validates them on return.
+  // The SDK transformer moves unsupported constraints (lengths, ranges…) into descriptions; the reply is trimmed to them on return.
   const jsonSchema = transformJSONSchema(raw);
   const stream = ctx.client.beta.messages.stream({
     model: ctx.model,
@@ -47,9 +47,101 @@ export async function callJSON<T>(ctx: AICtx, opts: { system: string; content: s
   } catch {
     throw new AIHttpError(502, "The AI returned malformed JSON.");
   }
-  const parsed = opts.schema.safeParse(data);
-  if (!parsed.success) throw new AIHttpError(502, "The AI response did not match the expected structure.");
-  return parsed.data;
+  return conform(opts.schema, sanitize(data, raw, raw));
+}
+
+type JSONSchema = { [k: string]: unknown };
+
+/**
+ * Size and range limits (max items, min/max values) are only hints to the model, so a long
+ * answer can exceed them. Trim and clamp to the schema instead of rejecting the whole answer.
+ */
+export function sanitize(value: unknown, schema: JSONSchema, root: JSONSchema): unknown {
+  const ref = schema.$ref as string | undefined;
+  if (ref) {
+    const target = ref.replace(/^#\//, "").split("/").reduce<unknown>((o, k) => (o as JSONSchema | undefined)?.[k], root) as JSONSchema | undefined;
+    return target ? sanitize(value, target, root) : value;
+  }
+  const anyOf = schema.anyOf as JSONSchema[] | undefined;
+  if (anyOf) {
+    if (value === null) return value;
+    // Pick the variant whose constant fields (e.g. kind) match.
+    const v = value as JSONSchema;
+    const match = anyOf.find((alt) => {
+      const a = resolve(alt, root);
+      const props = (a.properties ?? {}) as Record<string, JSONSchema>;
+      const consts = Object.entries(props).filter(([, p]) => "const" in p);
+      if (a.type === "null") return false;
+      if (consts.length) return typeof v === "object" && v !== null && consts.every(([k, p]) => v[k] === p.const);
+      return (a.type === "object") === (typeof v === "object" && !Array.isArray(v));
+    });
+    return match ? sanitize(value, match, root) : value;
+  }
+  if ((schema.type === "number" || schema.type === "integer") && typeof value === "number") {
+    let n = value;
+    if (typeof schema.minimum === "number") n = Math.max(schema.minimum, n);
+    if (typeof schema.maximum === "number") n = Math.min(schema.maximum, n);
+    if (schema.type === "integer") n = Math.round(n);
+    const allowed = schema.enum as number[] | undefined;
+    if (allowed?.length && !allowed.includes(n)) n = allowed.reduce((best, x) => (Math.abs(x - n) < Math.abs(best - n) ? x : best));
+    return n;
+  }
+  if (schema.type === "array" && Array.isArray(value)) {
+    const items = schema.items as JSONSchema | undefined;
+    const out = items ? value.map((x) => sanitize(x, items, root)) : value;
+    return typeof schema.maxItems === "number" ? out.slice(0, schema.maxItems) : out;
+  }
+  if (schema.type === "object" && value && typeof value === "object" && !Array.isArray(value)) {
+    const props = (schema.properties ?? {}) as Record<string, JSONSchema>;
+    const out: JSONSchema = { ...(value as JSONSchema) };
+    for (const [k, p] of Object.entries(props)) if (k in out) out[k] = sanitize(out[k], p, root);
+    return out;
+  }
+  return value;
+}
+
+function resolve(s: JSONSchema, root: JSONSchema): JSONSchema {
+  const ref = s.$ref as string | undefined;
+  if (!ref) return s;
+  return (ref.replace(/^#\//, "").split("/").reduce<unknown>((o, k) => (o as JSONSchema | undefined)?.[k], root) as JSONSchema) ?? s;
+}
+
+/**
+ * Validate; if one list item is malformed (e.g. a layout block missing a field), drop that item
+ * and keep the rest rather than failing the whole proposal. Anything else is reported precisely.
+ */
+export function conform<T>(schema: z.ZodType<T>, input: unknown): T {
+  let data = input;
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const r = schema.safeParse(data);
+    if (r.success) return r.data;
+    const issue = r.error.issues[0];
+    const path = issue.path as (string | number)[];
+    // Too long or out of range: trim or clamp in place.
+    const here = path.reduce<unknown>((o, k) => (o as Record<string | number, unknown>)?.[k], data);
+    const limit = (issue as { maximum?: unknown; minimum?: unknown }).maximum ?? (issue as { minimum?: unknown }).minimum;
+    if (path.length && typeof limit === "number" && ((issue.code === "too_big" && Array.isArray(here)) || ((issue.code === "too_big" || issue.code === "too_small") && typeof here === "number"))) {
+      data = structuredClone(data);
+      const holder = path.slice(0, -1).reduce<unknown>((o, k) => (o as Record<string | number, unknown>)[k], data) as Record<string | number, unknown>;
+      holder[path[path.length - 1]] = Array.isArray(here) ? here.slice(0, limit) : limit;
+      continue;
+    }
+    // Deepest list element on the path that can be removed.
+    let cut = -1;
+    for (let i = path.length - 1; i >= 0; i--) {
+      if (typeof path[i] !== "number") continue;
+      const parent = path.slice(0, i).reduce<unknown>((o, k) => (o as Record<string | number, unknown>)?.[k], data);
+      if (Array.isArray(parent)) {
+        cut = i;
+        break;
+      }
+    }
+    if (cut < 0) throw new AIHttpError(502, `The AI response did not match the expected structure (${path.join(".") || "root"}: ${issue.message}).`);
+    data = structuredClone(data);
+    const parent = path.slice(0, cut).reduce<unknown>((o, k) => (o as Record<string | number, unknown>)[k], data) as unknown[];
+    parent.splice(path[cut] as number, 1);
+  }
+  throw new AIHttpError(502, "The AI response did not match the expected structure.");
 }
 
 export const RESEARCH_DOMAINS = [

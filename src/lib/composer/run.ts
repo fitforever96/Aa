@@ -1,9 +1,9 @@
 "use client";
 
 import type { ChatTurn, DocLength, Proposal } from "../types";
-import type { ComposeSpecT } from "../ai/tasks/compose";
+import { toWire, type ComposeSpecT } from "../ai/tasks/compose";
 import { activeAssumptionVersion, db, getSettings, saveProposal, snapshotVersion } from "../db";
-import { aiFetch } from "../client";
+import { aiFetch, type AIError } from "../client";
 import { imageFileToDataUrl } from "../images";
 import { readImportFile } from "../import/files";
 import { applyOps, type Op } from "../commands/ops";
@@ -128,18 +128,19 @@ export async function composeTurn(opts: { proposalId: string | null; request: st
     onStep("compose");
     const sections = base ? base.document.sections.filter((s) => s.enabled) : [];
     const rate = base ? resolveRate(base).cents : version.assumptions.laborRateCentsPerHour;
-    const spec = await aiFetch<ComposeSpecT>(
-      "/api/ai/compose",
-      {
-        request,
-        transcript: history.slice(-20).map((t) => ({ role: t.role, text: t.text.slice(0, 20_000) })),
-        current: base ? toEngineState(base, sections) : null,
-        lookupNotes,
-        attachments: attachments.map(({ kind, name, mediaType, data }) => ({ kind, name, mediaType, data })),
-        defaults: { length: opts.length, laborRate: `${formatMoney(rate)}/hr` },
-      },
-      settings,
-    );
+    const payload = {
+      request,
+      transcript: history.slice(-20).map((t) => ({ role: t.role, text: t.text.slice(0, 20_000) })),
+      current: base ? toWire(toEngineState(base, sections)) : null,
+      lookupNotes: lookupNotes?.slice(0, 40_000) ?? null,
+      attachments: attachments.map(({ kind, name, mediaType, data }) => ({ kind, name, mediaType, data })),
+      defaults: { length: opts.length, laborRate: `${formatMoney(rate)}/hr` },
+    };
+    // One automatic retry when the connection drops or Claude has temporary trouble.
+    const spec = await aiFetch<ComposeSpecT>("/api/ai/compose", payload, settings).catch((e: unknown) => {
+      if ((e as AIError)?.retryable) return aiFetch<ComposeSpecT>("/api/ai/compose", payload, settings);
+      throw e;
+    });
     onStep("apply");
     const allowed = new Set([...statedAmounts([request, ...history.filter((t) => t.role === "user").map((t) => t.text), ...attachments.filter((a) => a.kind === "text").map((a) => a.data)]), ...(base ? proposalAmounts(base) : [])]);
     const r = applySpec(spec, base, deps, allowed);

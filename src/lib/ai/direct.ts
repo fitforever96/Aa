@@ -43,12 +43,29 @@ export async function friendlyError(e: unknown): Promise<string> {
   if (e instanceof Anthropic.AuthenticationError) return "Claude rejected your API key. Check it in Settings › AI & Research.";
   if (e instanceof Anthropic.PermissionDeniedError) return "Your Claude API key doesn't have access to this model.";
   if (e instanceof Anthropic.RateLimitError) return "Claude is busy or your account hit its rate limit. Wait a minute and try again.";
-  if (e instanceof Anthropic.APIConnectionError) return "Couldn't reach Claude. Check your connection.";
+  if (e instanceof Anthropic.APIConnectionError || isNetworkFailure(e)) return CONNECTION_LOST;
   if (e instanceof Anthropic.APIError) {
     if (/credit balance|billing/i.test(e.message)) return "Your Anthropic account needs credits. Add billing at console.anthropic.com › Billing.";
-    return `Claude returned an error (${e.status ?? "unknown"}).`;
+    if (e.status === 529 || /overloaded/i.test(e.message)) return "Claude is overloaded right now. Try again in a minute.";
+    // The API's own explanation (never contains proposal content) makes faults diagnosable.
+    const detail = ((e.error as { error?: { message?: string } } | undefined)?.error?.message ?? "").slice(0, 300);
+    return `Claude returned an error (${e.status ?? "unknown"})${detail ? `: ${detail}` : "."}`;
   }
   return e instanceof Error ? e.message : "AI request failed.";
+}
+
+const CONNECTION_LOST = "The connection to Claude dropped. Keep the app open and the screen on while it writes (iPhone pauses the connection in the background), then try again.";
+
+/** Safari reports a dropped fetch as "Load failed"; other browsers as "Failed to fetch" / network errors. */
+function isNetworkFailure(e: unknown) {
+  return e instanceof TypeError && /load failed|failed to fetch|network/i.test(e.message);
+}
+
+/** Worth one automatic retry: dropped connections and temporary server trouble. */
+async function retryable(e: unknown): Promise<boolean> {
+  const { default: Anthropic } = await import("@anthropic-ai/sdk");
+  if (e instanceof Anthropic.APIConnectionError || isNetworkFailure(e)) return true;
+  return e instanceof Anthropic.APIError && (e.status === undefined || e.status >= 500);
 }
 
 export async function runDirect<T>(path: string, body: unknown, settings: Settings): Promise<T> {
@@ -56,12 +73,15 @@ export async function runDirect<T>(path: string, body: unknown, settings: Settin
   if (!loader) throw new Error(`Unknown AI task ${path}`);
   const task = await loader();
   const parsed = task.Body.safeParse(body);
-  if (!parsed.success) throw new Error("This request couldn't be prepared for Claude.");
+  if (!parsed.success) {
+    const i = parsed.error.issues[0];
+    throw new Error(`This request couldn't be prepared for Claude (${i.path.join(".") || "request"}: ${i.message}).`);
+  }
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (await task.run(await ctx(settings.ai.apiKey!), parsed.data as any)) as T;
   } catch (e) {
-    throw new Error(await friendlyError(e));
+    throw Object.assign(new Error(await friendlyError(e)), { retryable: await retryable(e) });
   }
 }
 

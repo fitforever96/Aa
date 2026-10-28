@@ -13,7 +13,7 @@ export const Body = z.object({
   knowledge: z.array(z.string().max(3000)).max(10),
 });
 
-const Out = z.object({ revisions: z.array(RevisionSchema), notes: z.array(z.string()) });
+export const Out = z.object({ revisions: z.array(RevisionSchema), notes: z.array(z.string()) });
 
 export async function run(ctx: AICtx, body: z.infer<typeof Body>) {
 

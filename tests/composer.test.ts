@@ -2,7 +2,7 @@ import "fake-indexeddb/auto";
 import { describe, it, expect } from "vitest";
 import Anthropic from "@anthropic-ai/sdk";
 import { applySpec, coreCheck, ensureFrequencyWhy, proposalAmounts, statedAmounts, toEngineState } from "@/lib/composer/apply";
-import { ComposeSpec, run as runCompose, type ComposeSpecT } from "@/lib/ai/tasks/compose";
+import { ComposeSpec, fromWire, run as runCompose, toWire, type ComposeSpecT } from "@/lib/ai/tasks/compose";
 import { priceProposal } from "@/lib/engine/pricing";
 import { chatOps } from "@/lib/composer/run";
 import { SEED_CAPABILITIES, SEED_EQUIPMENT } from "@/lib/seed";
@@ -156,7 +156,8 @@ describe("proposal engine: request to Claude", () => {
     let body: Record<string, unknown> = {};
     const fetch = async (_u: unknown, init?: RequestInit) => {
       body = JSON.parse(String(init?.body));
-      return sse(JSON.stringify(spec()));
+      const sp = spec();
+      return sse(JSON.stringify({ ...toWire(sp), reply: sp.reply, assumptions: sp.assumptions, questions: sp.questions }));
     };
     const client = new Anthropic({ apiKey: "sk-ant-test", dangerouslyAllowBrowser: true, fetch: fetch as typeof globalThis.fetch, maxRetries: 0 });
     const out = await runCompose(
@@ -175,6 +176,7 @@ describe("proposal engine: request to Claude", () => {
     );
     expect(ComposeSpec.parse(out).programs[0].recurringPrice).toBe(350);
     expect(JSON.stringify(body.system)).toContain("MASTER-MEMORY-TEXT");
+    expect(JSON.stringify(body.system)).not.toContain("Never write dollar amounts or prices in any text");
     const msgs = JSON.stringify(body.messages);
     expect(msgs).toContain("justify the weekly frequency");
     expect(msgs).toContain("Riverside Foods at $350");
@@ -197,5 +199,71 @@ describe("proposal engine: offline revisions", () => {
     const r = chatOps("make it $1,200 a month", base);
     expect(r.ops).toEqual([]);
     expect(r.notes[0]).toMatch(/don't convert monthly prices/);
+  });
+});
+
+describe("proposal engine: a comprehensive multi-service request", () => {
+  // Anthony's surgical center request: three services, an initial price that includes equipment, a stated discount.
+  const request = `244 W Maple Rd Troy, MI 48084 Proposal for Surgical Center Pest Control. Coverage for rodents, roaches, ants, spiders, occasional invaders and flies. Comprehensive, AIM, triple guarantee. Tincat traps interior 12. Exterior bait stations 9. Equipment cost is $600. Precision pest control discounted from $210 to $197. Initial service is $994 which includes equipment. Monthly service is $197 per month. Rodent repellent monthly for $168 blended with an insecticide. Twice per year Termidor treatment $675.`;
+  const blocks: ComposeSpecT["story"]["blocks"] = [
+    { kind: "paragraph", priority: 1, text: "The recent renovation disturbed soil and harborage around the building. Precision pest control has been discounted from $210 to $197 per month." },
+    { kind: "paragraph", priority: 2, text: "A comparable center paid $999 last year." },
+    { kind: "callout", priority: 1, title: "Why monthly service", text: "Monthly service is required because renovation pushed pests toward the structure.", emphasis: "" },
+    { kind: "scope", priority: 1, cards: [
+      { eyebrow: "First service", title: "Initial service", priceKey: "p0_initial", priceSuffix: "", bullets: ["Install 12 Tin Cats", "Install 9 rock-style exterior stations every 75 feet"] },
+      { eyebrow: "Monthly", title: "Precision pest control", priceKey: "p0_recurring", priceSuffix: " / MONTH", bullets: ["Interior and exterior service", "Dumpster area inspected separately"] },
+      { eyebrow: "Monthly", title: "Rodent repellent with insecticide", priceKey: "p1_recurring", priceSuffix: " / MONTH", bullets: ["Organic repellent blended with insecticide"] },
+      { eyebrow: "Twice a year", title: "Termidor perimeter treatment", priceKey: "p2_recurring", priceSuffix: " / TREATMENT", bullets: ["1 foot up, 1 foot out"] },
+    ] },
+    { kind: "paragraph", priority: 1, text: "Next step: accept the agreement so service can begin December 1." },
+  ];
+  const s: ComposeSpecT = {
+    reply: "Built a full proposal with three services.",
+    customer: { name: "Surgical Center", contactName: null, contactTitle: null },
+    site: { name: null, address: { line1: "244 W Maple Rd", city: "Troy", state: "MI", zip: "48084" }, propertyType: "Ambulatory surgery center", model: "healthcare", squareFeet: null, buildings: null, floors: null, apartments: null, activityLevel: null, findings: ["Recent renovation and new landscaping along the foundation."] },
+    programs: [
+      { name: "Precision Pest Control", services: ["general_pest", "german_cockroach", "ant", "fly", "rodent"], frequency: "monthly", customVisitsPerYear: null, customLabel: null, apartmentsPerVisit: null, technicians: null, devices: [{ kind: "tin_cat", name: "Tin Cat", quantity: 12, location: "interior" }, { kind: "exterior_bait_station", name: "Exterior bait station", quantity: 9, location: "exterior" }], initialPrice: 994, recurringPrice: 197, recurringBasis: "per_month" },
+      { name: "Rodent Repellent and Insecticide Service", services: ["rodent", "exterior_pest"], frequency: "monthly", customVisitsPerYear: null, customLabel: null, apartmentsPerVisit: null, technicians: null, devices: [], initialPrice: null, recurringPrice: 168, recurringBasis: "per_month" },
+      { name: "Termidor Perimeter Treatment", services: ["exterior_pest"], frequency: "semiannual", customVisitsPerYear: null, customLabel: null, apartmentsPerVisit: null, technicians: null, devices: [], initialPrice: null, recurringPrice: 675, recurringBasis: "per_visit" },
+    ],
+    charges: [],
+    document: { title: "Commercial Pest Management Program", length: "full", includeGuarantee: true },
+    story: { hero: { eyebrow: "COMMERCIAL PEST CONTROL", title: "Surgical Center", subtitle: "Commercial Pest Management Program", tagline: "Assess | Implement | Monitor", stats: [] }, blocks },
+    assumptions: [],
+    questions: [],
+  };
+
+  it("builds all three services with the exact stated prices and every core item", () => {
+    const { proposal, dropped } = applySpec(s, null, deps, statedAmounts([request]));
+    expect(dropped).toEqual([]);
+    // The $994 initial covers the account: add-on services get no surprise initial charge.
+    expect(proposal.programs.map((x) => [x.pricing.initialOverride?.cents ?? null, x.pricing.recurringOverride?.cents ?? null])).toEqual([
+      [99400, 19700],
+      [0, 16800],
+      [0, 67500],
+    ]);
+    expect(proposal.programs.map((x) => x.billing.method)).toEqual(["fixed_monthly", "fixed_monthly", "per_visit"]);
+    const strip = proposal.story?.blocks.find((b) => b.kind === "priceStrip");
+    expect(strip?.kind === "priceStrip" && strip.items.map((i) => i.label)).toEqual([
+      "Precision Pest Control · Initial service",
+      "Precision Pest Control · Monthly service",
+      "Rodent Repellent and Insecticide Service · Monthly service",
+      "Termidor Perimeter Treatment · Semiannual service",
+    ]);
+    expect(proposal.story?.blocks.filter((b) => b.kind === "paragraph" && /next step/i.test(b.text))).toHaveLength(1);
+    expect(proposal.document.sections.some((x) => x.type === "triple_guarantee" && x.enabled)).toBe(true);
+    expect(proposal.document.options.length).toBe("full");
+    const missing = coreCheck(proposal).filter((c) => !c.ok);
+    expect(missing).toEqual([]);
+    const text = JSON.stringify(proposal.story?.blocks);
+    expect(text).toContain("discounted from $210 to $197");
+    expect(text).not.toContain("$999");
+  });
+
+  it("round-trips through the format Claude writes", () => {
+    const wire = { ...toWire(s), reply: s.reply, assumptions: s.assumptions, questions: s.questions };
+    expect(wire.site.squareFeet).toBe(0);
+    expect(wire.document.guarantee).toBe("include");
+    expect(fromWire(wire)).toEqual(s);
   });
 });

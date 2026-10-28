@@ -15,7 +15,8 @@ export const Body = z.object({
   instruction: z.string().max(2000).optional(),
 });
 
-const P = z.union([z.literal(1), z.literal(2), z.literal(3)]);
+// A plain list of values, not a union: the API allows only a few union-typed fields per request.
+const P = z.literal([1, 2, 3]).describe("1 essential, 2 supporting, 3 optional depth");
 const Item = z.object({ title: z.string(), body: z.string() });
 export const BlockOut = z.union([
   z.object({ kind: z.literal("heading"), priority: P, title: z.string(), accent: z.string(), lead: z.string() }),
@@ -25,7 +26,7 @@ export const BlockOut = z.union([
   z.object({ kind: z.literal("checks"), priority: P, title: z.string(), items: z.array(Item).max(6) }),
   z.object({ kind: z.literal("darkColumns"), priority: P, title: z.string(), columns: z.array(Item).min(2).max(3) }),
   z.object({ kind: z.literal("stats"), priority: P, title: z.string(), stats: z.array(z.object({ value: z.string(), label: z.string() })).min(2).max(4) }),
-  z.object({ kind: z.literal("scope"), priority: P, cards: z.array(z.object({ eyebrow: z.string(), title: z.string(), priceKey: z.string(), priceSuffix: z.string(), bullets: z.array(z.string()).max(6) })).min(1).max(4) }),
+  z.object({ kind: z.literal("scope"), priority: P, cards: z.array(z.object({ eyebrow: z.string(), title: z.string(), priceKey: z.string(), priceSuffix: z.string(), bullets: z.array(z.string()).max(6) })).min(1).max(8) }),
   z.object({ kind: z.literal("bigNumber"), priority: P, title: z.string(), value: z.string(), caption: z.string(), text: z.string() }),
   z.object({ kind: z.literal("charge"), priority: P, title: z.string(), priceKey: z.string(), priceLabel: z.string(), text: z.string() }),
   z.object({ kind: z.literal("note"), priority: P, text: z.string() }),

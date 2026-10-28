@@ -60,7 +60,9 @@ export function proposalAmounts(p: Proposal): Set<number> {
 const FREQ_KINDS = ["one_time", "weekly", "biweekly", "twice_monthly", "monthly", "bimonthly", "quarterly", "semiannual", "annual", "five_day_weekly", "custom"] as const;
 
 /** The current proposal as the engine sees it (revisions edit this). */
-export function toEngineState(p: Proposal, sections: ProposalSection[]): Record<string, unknown> {
+export type EngineState = Omit<ComposeSpecT, "reply" | "assumptions" | "questions">;
+
+export function toEngineState(p: Proposal, sections: ProposalSection[]): EngineState {
   const keys = priceKeys(p);
   const keyOf = (ref: PriceRef | null) => (ref ? keys.find((k) => JSON.stringify(k.ref) === JSON.stringify(ref))?.key ?? "" : "");
   const charges = p.programs[0] ? [...p.programs[0].pricing.additionalInitial.map((l) => ({ l, phase: "initial" as const })), ...p.programs[0].pricing.additionalRecurring.map((l) => ({ l, phase: "recurring" as const }))] : [];
@@ -102,8 +104,8 @@ export function toEngineState(p: Proposal, sections: ProposalSection[]): Record<
     })),
     charges: charges.map((c) => ({ label: c.l.label, description: c.l.description, amount: c.l.amountCents / 100, phase: c.phase })),
     document: { title: p.title, length: p.document.options.length ?? "full", includeGuarantee: p.document.sections.some((s) => s.type === "triple_guarantee" && s.enabled) },
-    story: { hero: story.hero, blocks },
-  };
+    story: { hero: story.hero, blocks: blocks as EngineState["story"]["blocks"] },
+  } as EngineState;
 }
 
 // ───────────────────────── Engine state → proposal ─────────────────────────
@@ -179,7 +181,10 @@ export function applySpec(spec: ComposeSpecT, base: Proposal | null, deps: Build
     pr.services = [...new Set(sp.services)];
     pr.frequency = frequencyFrom(sp);
     pr.chargeType = sp.frequency === "one_time" ? "one_time" : "recurring";
-    if (pr.billing.method !== "fixed_monthly") pr.billing.method = sp.frequency === "one_time" ? "one_time" : "per_visit";
+    // A monthly price Anthony stated for monthly service is billed per month (identical amount, his wording).
+    const monthly = sp.recurringBasis === "per_month" && sp.frequency === "monthly" && sp.recurringPrice != null;
+    if (monthly) pr.billing = { ...pr.billing, method: "fixed_monthly", fixedMonthlyApproved: true };
+    else if (pr.billing.method !== "fixed_monthly" || sp.frequency !== "monthly") pr.billing = { ...pr.billing, method: sp.frequency === "one_time" ? "one_time" : "per_visit" };
     if (sp.technicians) pr.technicians = sp.technicians;
     pr.apartmentsPerVisit = sp.apartmentsPerVisit ?? pr.apartmentsPerVisit;
     pr.equipment = sp.devices.map((d) => deviceFrom(d, deps.catalog, prev?.equipment ?? [])).filter((x): x is EquipmentAllocation => !!x);
@@ -193,7 +198,8 @@ export function applySpec(spec: ComposeSpecT, base: Proposal | null, deps: Build
       pr.pricing.recurringOverride = null;
     } else {
       pr.pricing.recurringOverride = lock(recurring, prev?.pricing.recurringOverride ?? null);
-      pr.pricing.initialOverride = lock(initial, prev?.pricing.initialOverride ?? null);
+      // Add-on services have no separate initial charge unless one was stated (never a surprise calculated one).
+      pr.pricing.initialOverride = initial == null && i > 0 ? { cents: 0, locked: true, lockedAt: nowISO(), note: "No separate initial charge." } : lock(initial, prev?.pricing.initialOverride ?? null);
     }
     return pr;
   });
@@ -234,18 +240,38 @@ export function applySpec(spec: ComposeSpecT, base: Proposal | null, deps: Build
     ),
   };
   const sections = p.document.sections.filter((x) => x.enabled);
-  p.story = ensureFrequencyWhy(finalizeAIStory(out, p, sections), p);
+  p.story = ensureFrequencyWhy(finalizeAIStory(out, p, sections, allowed), p);
   p.updatedAt = nowISO();
   return { proposal: p, changes: base ? diff(base, p) : [], dropped };
 }
 
+/** Everyday ways a frequency is written ("twice a year" for semiannual, and so on). */
+const FREQ_WORDS: Partial<Record<FrequencySpec["kind"], string[]>> = {
+  weekly: ["weekly", "every week", "each week"],
+  biweekly: ["every two weeks", "every other week", "biweekly", "bi-weekly"],
+  twice_monthly: ["twice monthly", "twice a month", "twice per month"],
+  monthly: ["monthly", "every month", "each month"],
+  bimonthly: ["every other month", "every two months", "bimonthly", "bi-monthly"],
+  quarterly: ["quarterly", "every three months", "four times a year"],
+  semiannual: ["semiannual", "semi-annual", "twice a year", "twice per year", "twice-yearly", "twice yearly", "every six months"],
+  annual: ["annual", "once a year", "yearly", "every year"],
+  five_day_weekly: ["five days a week", "five days per week"],
+};
+const WHY = /\bwhy\b|\bbecause\b|\brequire|\bneeded\b|\bnecessary\b|\bkeeps?\b|\bfits?\b|\bdue to\b/;
+
 /** Make sure the story explains why each recurring frequency fits; add the rules rationale if not. */
 export function ensureFrequencyWhy(story: Story, p: Proposal): Story {
-  const text = JSON.stringify(story.blocks.filter((b) => b.kind === "callout" || b.kind === "paragraph" || b.kind === "heading" || b.kind === "bigNumber")).toLowerCase();
-  const missing = p.programs.filter((pr) => pr.chargeType === "recurring" && !(text.includes(frequencyLabel(pr.frequency).toLowerCase()) && /\bwhy\b|\bbecause\b|\brequire|\bneeded\b|\bnecessary\b|\bkeeps?\b/.test(text)));
+  const texts = story.blocks.filter((b) => b.kind === "callout" || b.kind === "paragraph" || b.kind === "heading" || b.kind === "bigNumber" || b.kind === "checks" || b.kind === "darkColumns").map((b) => JSON.stringify(b).toLowerCase());
+  const words = (pr: ServiceProgram) => [frequencyLabel(pr.frequency).toLowerCase(), ...(FREQ_WORDS[pr.frequency.kind] ?? [])];
+  // Explained = a block names this cadence (or this program) and gives a reason.
+  const explained = (pr: ServiceProgram) => texts.some((t) => WHY.test(t) && (words(pr).some((w) => t.includes(w)) || (p.programs.length > 1 && t.includes(pr.name.toLowerCase()))));
+  const missing = p.programs.filter((pr) => pr.chargeType === "recurring" && !explained(pr));
   if (!missing.length) return story;
-  const add: StoryBlock[] = missing.map((pr) => ({ kind: "callout", priority: 1, title: `Why ${frequencyLabel(pr.frequency).toLowerCase()} service`, text: frequencyRationale(p.property, pr), emphasis: "" }));
-  const at = Math.max(0, story.blocks.findIndex((b) => b.kind === "paragraph") + 1);
+  const add: StoryBlock[] = missing.map((pr) => ({ kind: "callout", priority: 1, title: p.programs.length > 1 ? `Why ${pr.name} is ${frequencyLabel(pr.frequency).toLowerCase()}` : `Why ${frequencyLabel(pr.frequency).toLowerCase()} service`, text: frequencyRationale(p.property, pr), emphasis: "" }));
+  // Next to the existing frequency reasoning when there is some; otherwise before the scope.
+  const lastCallout = story.blocks.map((b) => b.kind).lastIndexOf("callout");
+  const scope = story.blocks.findIndex((b) => b.kind === "heading" || b.kind === "scope");
+  const at = lastCallout >= 0 ? lastCallout + 1 : scope >= 0 ? scope : Math.max(0, story.blocks.findIndex((b) => b.kind === "paragraph") + 1);
   return { ...story, blocks: [...story.blocks.slice(0, at), ...add, ...story.blocks.slice(at)] };
 }
 

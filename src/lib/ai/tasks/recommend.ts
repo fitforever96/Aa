@@ -4,7 +4,7 @@ import { writingStandard, planningStandard } from "../prompts";
 
 
 export const Body = z.object({ facts: z.record(z.string(), z.unknown()) });
-const Out = z.object({
+export const Out = z.object({
   confirmed: z.array(z.string()),
   assumptions: z.array(z.string()),
   recommended: z.array(z.string()),

@@ -43,7 +43,10 @@ export function useAIStatus(): AIStatus | null {
   return srv;
 }
 
-export class AIError extends Error {}
+export class AIError extends Error {
+  /** A dropped connection or temporary server trouble: safe to retry once. */
+  retryable = false;
+}
 
 /**
  * Calls an AI task. Uses the server when one is configured; otherwise calls Claude
@@ -58,7 +61,7 @@ export async function aiFetch<T>(path: string, body: unknown, settings: Settings
     try {
       return await runDirect<T>(path, body, settings);
     } catch (e) {
-      throw new AIError(e instanceof Error ? e.message : "AI request failed.");
+      throw Object.assign(new AIError(e instanceof Error ? e.message : "AI request failed."), { retryable: !!(e as { retryable?: boolean })?.retryable });
     }
   }
   const res = await fetch(withBase(path), {
