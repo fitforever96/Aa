@@ -49,20 +49,36 @@ function reverb(ctx: Ctx, seconds = 2.4, decay = 2.6): ConvolverNode {
 }
 
 /** Master chain: compressor, a stereo-ish reverb send. Returns the dry bus to connect voices to. */
-function chain(ctx: Ctx, gain: number, wetAmount = 0.3, verbSeconds = 2.4) {
+/**
+ * Cinematic master chain: a warm low-pass takes the edge off the top end, gentle compression
+ * glues it, and a pre-delayed long reverb puts the sound in a large space.
+ */
+function chain(ctx: Ctx, gain: number, wetAmount = 0.42, verbSeconds = 3.2, warmth = 6200) {
   const master = ctx.createGain();
   master.gain.value = gain;
+  const lp = ctx.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = warmth;
+  lp.Q.value = 0.5;
+  const shelf = ctx.createBiquadFilter();
+  shelf.type = "highshelf";
+  shelf.frequency.value = 3500;
+  shelf.gain.value = -4;
   const comp = ctx.createDynamicsCompressor();
-  comp.threshold.value = -14;
-  comp.ratio.value = 3;
-  master.connect(comp).connect(ctx.destination);
-  const verb = reverb(ctx, verbSeconds);
+  comp.threshold.value = -20;
+  comp.ratio.value = 2.2;
+  comp.attack.value = 0.02;
+  comp.release.value = 0.4;
+  master.connect(lp).connect(shelf).connect(comp).connect(ctx.destination);
+  const pre = ctx.createDelay(0.2);
+  pre.delayTime.value = 0.04;
+  const verb = reverb(ctx, verbSeconds, 3.4);
   const wet = ctx.createGain();
   wet.gain.value = wetAmount;
-  verb.connect(wet).connect(master);
+  pre.connect(verb).connect(wet).connect(master);
   const bus = ctx.createGain();
   bus.connect(master);
-  bus.connect(verb);
+  bus.connect(pre);
   return bus;
 }
 
@@ -104,7 +120,7 @@ function blip(ctx: Ctx, out: AudioNode, freq: number, at: number, dur: number, g
   o.type = "sine";
   o.frequency.setValueAtTime(freq, at);
   o.frequency.exponentialRampToValueAtTime(freq * bend, at + dur);
-  const g = env(ctx, at, 0.002, gain, 0.0001, dur);
+  const g = env(ctx, at, Math.min(0.008, dur * 0.25), gain, 0.0001, dur);
   const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
   if (p) {
     p.pan.value = pan;
@@ -147,20 +163,20 @@ function lock(ctx: Ctx, out: AudioNode, at: number, gain = 0.25, pitch = 2200) {
   const bp = ctx.createBiquadFilter();
   bp.type = "bandpass";
   bp.frequency.value = pitch;
-  bp.Q.value = 14;
-  const g = env(ctx, at, 0.001, gain, 0.0001, 0.09);
+  bp.Q.value = 5;
+  const g = env(ctx, at, 0.004, gain * 0.45, 0.0001, 0.12);
   n.connect(bp).connect(g).connect(out);
   n.start(at);
   const th = ctx.createOscillator();
   th.type = "sine";
-  th.frequency.setValueAtTime(140, at);
-  th.frequency.exponentialRampToValueAtTime(48, at + 0.22);
-  const tg = env(ctx, at, 0.003, gain * 0.9, 0.0001, 0.3);
+  th.frequency.setValueAtTime(110, at);
+  th.frequency.exponentialRampToValueAtTime(42, at + 0.3);
+  const tg = env(ctx, at, 0.008, gain, 0.0001, 0.45);
   th.connect(tg).connect(out);
   th.start(at);
   th.stop(at + 0.35);
   // Metallic ring.
-  fm(ctx, out, pitch * 0.5, at + 0.004, 0.35, { ratio: 3.17, index: 1.4, gain: gain * 0.18 });
+  fm(ctx, out, pitch * 0.5, at + 0.006, 0.5, { ratio: 3.17, index: 0.9, gain: gain * 0.08, attack: 0.01 });
 }
 
 /** Sub-bass swell. */
@@ -181,14 +197,14 @@ function sub(ctx: Ctx, out: AudioNode, at: number, dur: number, f0: number, f1: 
 /** Rising FM riser (the "charging" sweep). */
 function riser(ctx: Ctx, out: AudioNode, at: number, dur: number, f0: number, f1: number, gain: number) {
   const car = ctx.createOscillator();
-  car.type = "sawtooth";
+  car.type = "triangle";
   car.frequency.setValueAtTime(f0, at);
   car.frequency.exponentialRampToValueAtTime(f1, at + dur);
   const lp = ctx.createBiquadFilter();
   lp.type = "lowpass";
-  lp.Q.value = 6;
-  lp.frequency.setValueAtTime(300, at);
-  lp.frequency.exponentialRampToValueAtTime(6000, at + dur);
+  lp.Q.value = 2;
+  lp.frequency.setValueAtTime(250, at);
+  lp.frequency.exponentialRampToValueAtTime(3200, at + dur);
   const g = ctx.createGain();
   g.gain.setValueAtTime(0.0001, at);
   g.gain.exponentialRampToValueAtTime(gain, at + dur * 0.85);
@@ -243,78 +259,77 @@ function hum(ctx: Ctx, out: AudioNode, notes: number[], at: number, dur: number,
 
 /** Big glassy FM chord with a shimmer octave. */
 function chord(ctx: Ctx, out: AudioNode, notes: number[], at: number, dur: number, gain: number) {
-  notes.forEach((m, i) => fm(ctx, out, hz(m), at + i * 0.018, dur, { ratio: 2.0, index: 1.6, gain, attack: 0.01, pan: (i / Math.max(1, notes.length - 1)) * 1.2 - 0.6 }));
-  notes.slice(-2).forEach((m) => fm(ctx, out, hz(m + 12), at + 0.06, dur * 0.8, { ratio: 3.5, index: 0.8, gain: gain * 0.35, attack: 0.02 }));
+  notes.forEach((m, i) => fm(ctx, out, hz(m), at + i * 0.03, dur, { ratio: 2.0, index: 0.9, gain, attack: 0.09, pan: (i / Math.max(1, notes.length - 1)) * 1.2 - 0.6 }));
+  notes.slice(-2).forEach((m) => fm(ctx, out, hz(m + 12), at + 0.15, dur * 0.8, { ratio: 3.0, index: 0.4, gain: gain * 0.22, attack: 0.25 }));
 }
 
 // ───────────────────────── Cues ─────────────────────────
 
-/** Launch: ~5.4 s. Boot chirps → charging riser → servo lock → reactor online chord → confirmations. */
+/** Launch: ~5.4 s. Low swell and soft data chirps → rising charge → deep lock → warm "online" chord. */
 function composeIntro(ctx: Ctx) {
-  const bus = chain(ctx, 0.6, 0.32, 3.2);
-  sub(ctx, bus, 0.0, 2.4, 32, 55, 0.35);
-  dataBurst(ctx, bus, 0.05, 1.3, 26, 0.05);
-  sweepNoise(ctx, bus, 0.15, 1.35, 250, 7000, 0.07, 2.2);
-  riser(ctx, bus, 0.25, 1.3, 90, 1100, 0.05);
-  lock(ctx, bus, 1.6, 0.32, 2300);
-  hum(ctx, bus, [38, 45, 50], 1.6, 3.6, 0.045);
-  chord(ctx, bus, [62, 66, 69, 73, 78], 1.66, 3.2, 0.055);
-  blip(ctx, bus, 1760, 2.55, 0.05, 0.06, 1, -0.4);
-  blip(ctx, bus, 2640, 2.63, 0.06, 0.06, 1, -0.4);
-  blip(ctx, bus, 1760, 3.3, 0.05, 0.05, 1, 0.4);
-  blip(ctx, bus, 2640, 3.38, 0.06, 0.05, 1, 0.4);
-  dataBurst(ctx, bus, 3.9, 0.5, 9, 0.035, 2600, 5200);
-  fm(ctx, bus, hz(90), 4.2, 1.0, { ratio: 2.0, index: 0.6, gain: 0.03 });
+  const bus = chain(ctx, 0.55, 0.45, 3.6, 5600);
+  sub(ctx, bus, 0.0, 2.6, 34, 55, 0.3);
+  dataBurst(ctx, bus, 0.1, 1.3, 14, 0.022, 1200, 3000);
+  sweepNoise(ctx, bus, 0.2, 1.4, 220, 3600, 0.035, 1.4);
+  riser(ctx, bus, 0.3, 1.3, 90, 700, 0.03);
+  lock(ctx, bus, 1.6, 0.24, 1600);
+  hum(ctx, bus, [38, 45, 50], 1.6, 3.8, 0.035);
+  chord(ctx, bus, [62, 66, 69, 73, 78], 1.66, 3.4, 0.05);
+  blip(ctx, bus, 1318, 2.6, 0.07, 0.028, 1, -0.4);
+  blip(ctx, bus, 1760, 2.7, 0.08, 0.026, 1, -0.4);
+  blip(ctx, bus, 1318, 3.35, 0.07, 0.022, 1, 0.4);
+  blip(ctx, bus, 1760, 3.45, 0.08, 0.02, 1, 0.4);
+  fm(ctx, bus, hz(86), 4.0, 1.3, { ratio: 2.0, index: 0.4, gain: 0.02, attack: 0.3 });
 }
 
-/** Build start: ~3.4 s. Heavier power-up with accelerating charge pulses ending in a lock. */
+/** Build start: ~3.4 s. A low power-up with soft charge pulses settling into a gentle lock. */
 function composeBuildStart(ctx: Ctx) {
-  const bus = chain(ctx, 0.62, 0.28, 2.4);
-  sub(ctx, bus, 0.0, 3.0, 30, 62, 0.38);
-  sweepNoise(ctx, bus, 0.0, 0.45, 6000, 400, 0.05, 1.5);
-  riser(ctx, bus, 0.2, 2.2, 70, 1400, 0.055);
-  // Charge pulses accelerating from 6 to 26 per second.
-  let t = 0.3;
-  for (let i = 0; i < 30 && t < 2.45; i++) {
-    blip(ctx, bus, 900 + i * 45, t, 0.03, 0.045, 0.85, i % 2 ? 0.3 : -0.3);
-    t += 0.17 - i * 0.0048;
+  const bus = chain(ctx, 0.55, 0.4, 3.0, 5200);
+  sub(ctx, bus, 0.0, 3.0, 32, 58, 0.3);
+  sweepNoise(ctx, bus, 0.0, 0.6, 3200, 300, 0.03, 1.2);
+  riser(ctx, bus, 0.2, 2.2, 70, 900, 0.035);
+  // Soft charge pulses, accelerating.
+  let t = 0.35;
+  for (let i = 0; i < 26 && t < 2.45; i++) {
+    blip(ctx, bus, 660 + i * 22, t, 0.04, 0.02, 0.9, i % 2 ? 0.25 : -0.25);
+    t += 0.18 - i * 0.0058;
   }
-  lock(ctx, bus, 2.5, 0.3, 2000);
-  chord(ctx, bus, [62, 69, 74], 2.52, 0.9, 0.04);
+  lock(ctx, bus, 2.5, 0.22, 1500);
+  chord(ctx, bus, [62, 69, 74], 2.55, 1.1, 0.035);
 }
 
-/** Step locked: ~0.6 s. Three ascending data blips + a small lock. */
+/** Step locked: ~0.7 s. Two soft rising tones and a quiet lock. */
 function composeBuildStep(ctx: Ctx) {
-  const bus = chain(ctx, 0.55, 0.22, 1.2);
-  [1320, 1760, 2640].forEach((f, i) => blip(ctx, bus, f, i * 0.05, 0.045, 0.07, 1, -0.3 + i * 0.3));
-  lock(ctx, bus, 0.17, 0.14, 2600);
+  const bus = chain(ctx, 0.5, 0.38, 1.6, 5000);
+  [988, 1318].forEach((f, i) => blip(ctx, bus, f, i * 0.07, 0.08, 0.04, 1, -0.2 + i * 0.4));
+  lock(ctx, bus, 0.16, 0.12, 1800);
 }
 
-/** Build complete: ~3.4 s. Lock, sub thump, big reactor chord, sparkle, final confirm. */
+/** Build complete: ~3.4 s. Deep lock, sub bloom, wide warm chord, a soft final confirm. */
 function composeBuildDone(ctx: Ctx) {
-  const bus = chain(ctx, 0.62, 0.34, 3.2);
-  lock(ctx, bus, 0.0, 0.34, 1800);
-  sub(ctx, bus, 0.0, 1.4, 70, 40, 0.3);
-  chord(ctx, bus, [62, 66, 69, 73, 78, 81], 0.06, 3.0, 0.055);
-  dataBurst(ctx, bus, 0.25, 0.7, 14, 0.035, 2400, 5600);
-  blip(ctx, bus, 1760, 1.15, 0.06, 0.06, 1);
-  blip(ctx, bus, 3520, 1.24, 0.09, 0.05, 1);
+  const bus = chain(ctx, 0.55, 0.46, 3.8, 5600);
+  lock(ctx, bus, 0.0, 0.24, 1400);
+  sub(ctx, bus, 0.0, 1.6, 62, 38, 0.26);
+  chord(ctx, bus, [62, 66, 69, 73, 78, 81], 0.06, 3.2, 0.05);
+  dataBurst(ctx, bus, 0.3, 0.7, 8, 0.016, 1600, 3200);
+  blip(ctx, bus, 1318, 1.2, 0.09, 0.03, 1);
+  blip(ctx, bus, 1976, 1.32, 0.12, 0.025, 1);
 }
 
 /** Interface sounds (short; Web Audio for low latency). */
 const UI_SOUNDS = {
-  tick: { seconds: 0.09, gain: 1, fn: (ctx: Ctx, out: AudioNode) => (blip(ctx, out, 2880, 0, 0.035, 0.07, 0.62), blip(ctx, out, 5760, 0.002, 0.012, 0.018, 0.8)) },
+  tick: { seconds: 0.12, gain: 1, fn: (ctx: Ctx, out: AudioNode) => (blip(ctx, out, 1900, 0, 0.045, 0.06, 0.7), blip(ctx, out, 3800, 0.003, 0.02, 0.008, 0.85)) },
   confirm: {
-    seconds: 0.3,
+    seconds: 0.4,
     gain: 1,
     fn: (ctx: Ctx, out: AudioNode) => {
-      blip(ctx, out, 1568, 0, 0.05, 0.08, 1);
-      blip(ctx, out, 2349, 0.06, 0.08, 0.08, 1);
-      fm(ctx, out, 2349, 0.06, 0.22, { ratio: 3.01, index: 0.9, gain: 0.025 });
+      blip(ctx, out, 1046, 0, 0.07, 0.07, 1);
+      blip(ctx, out, 1568, 0.075, 0.11, 0.07, 1);
+      fm(ctx, out, 1568, 0.075, 0.3, { ratio: 2.0, index: 0.5, gain: 0.02, attack: 0.02 });
     },
   },
-  nav: { seconds: 0.25, gain: 1, fn: (ctx: Ctx, out: AudioNode) => (sweepNoise(ctx, out, 0, 0.16, 900, 5200, 0.05, 2), blip(ctx, out, 1320, 0.05, 0.05, 0.05, 1.3)) },
-  toggle: { seconds: 0.14, gain: 1, fn: (ctx: Ctx, out: AudioNode) => (blip(ctx, out, 1760, 0, 0.03, 0.06, 1), blip(ctx, out, 2640, 0.045, 0.04, 0.06, 1)) },
+  nav: { seconds: 0.3, gain: 1, fn: (ctx: Ctx, out: AudioNode) => (sweepNoise(ctx, out, 0, 0.2, 500, 2600, 0.035, 1.2), blip(ctx, out, 880, 0.06, 0.08, 0.04, 1.2)) },
+  toggle: { seconds: 0.2, gain: 1, fn: (ctx: Ctx, out: AudioNode) => (blip(ctx, out, 1318, 0, 0.05, 0.05, 1), blip(ctx, out, 1760, 0.06, 0.06, 0.05, 1)) },
 } as const;
 export type UiSound = keyof typeof UI_SOUNDS;
 
@@ -383,10 +398,10 @@ function mediaSession() {
 }
 
 const CUES = {
-  intro: { fn: composeIntro, seconds: 5.6, peak: 0.9 },
-  buildStart: { fn: composeBuildStart, seconds: 3.6, peak: 0.85 },
-  buildStep: { fn: composeBuildStep, seconds: 0.9, peak: 0.6 },
-  buildDone: { fn: composeBuildDone, seconds: 3.6, peak: 0.9 },
+  intro: { fn: composeIntro, seconds: 6.0, peak: 0.6 },
+  buildStart: { fn: composeBuildStart, seconds: 3.8, peak: 0.52 },
+  buildStep: { fn: composeBuildStep, seconds: 1.2, peak: 0.32 },
+  buildDone: { fn: composeBuildDone, seconds: 4.0, peak: 0.6 },
 } as const;
 type Cue = keyof typeof CUES;
 const cueEls: Partial<Record<Cue, HTMLAudioElement>> = {};
@@ -479,7 +494,7 @@ export function prepareUiSounds(): Promise<void> {
           s.fn(ctx, out);
         },
         s.seconds,
-        0.42,
+        0.22,
       );
       if (buf) uiBuffers[k] = buf;
     }
