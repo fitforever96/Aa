@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { haptic } from "@/lib/motion";
+import { playUi, prepareUiSounds, type UiSound } from "@/lib/chime";
 import { BookOpen, Calculator, FolderOpen, Home, Plus, Settings as Cog, WifiOff } from "lucide-react";
 import { ToastProvider } from "./Toast";
 import { useOnline, useSeeded, useSettings } from "@/lib/client";
@@ -47,11 +48,26 @@ export function AppShell({ children }: { children: ReactNode }) {
     const onPop = () => (poppedBack.current = true);
     // A short vibration on primary actions where the device supports it (Android).
     const onDown = (e: PointerEvent) => (e.target as HTMLElement | null)?.closest?.(".btn-primary") && haptic();
+    // High-tech interface clicks: one listener classifies every tap.
+    const onClick = (e: MouseEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (!el?.closest || el.closest("input, textarea, select, [data-silent]")) return;
+      let kind: UiSound | null = null;
+      if (el.closest('nav[aria-label="Primary"] a, aside nav a')) kind = "nav";
+      else if (el.closest(".btn-primary")) kind = "confirm";
+      else if (el.closest('[role="tab"], [role="radio"], [role="switch"], .chip')) kind = "toggle";
+      else if (el.closest("button, a, .card")) kind = "tick";
+      if (kind) playUi(kind);
+    };
+    const idle = setTimeout(() => void prepareUiSounds(), 1500);
     window.addEventListener("popstate", onPop);
     window.addEventListener("pointerdown", onDown, { passive: true });
+    window.addEventListener("click", onClick, { capture: true, passive: true });
     return () => {
+      clearTimeout(idle);
       window.removeEventListener("popstate", onPop);
       window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("click", onClick, { capture: true });
     };
   }, []);
 

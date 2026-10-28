@@ -455,3 +455,91 @@ html[data-vt] .page-enter { animation: none; }
 @keyframes build-ping { 75%, 100% { transform: scale(2.4); opacity: 0; } }
 .build-ping-dot { animation: build-dot 1.1s ease-in-out infinite; }
 @keyframes build-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.7); } }
+
+/* ---------- HUD (launch + build) ---------- */
+.hud-mono {
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.06em;
+}
+.hud-grid {
+  background-image:
+    linear-gradient(rgba(228, 0, 43, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(228, 0, 43, 0.07) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  animation: hud-fade-in 1.2s ease both;
+}
+.hud-scan {
+  background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 4px);
+  pointer-events: none;
+}
+@keyframes hud-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.hud-fade { animation: hud-fade-in 0.8s ease both; }
+.hud-corner { animation: hud-corner 0.6s var(--ease-out) both; }
+@keyframes hud-corner { 0% { opacity: 0; transform: scale(1.8); } 100% { opacity: 1; transform: none; } }
+.hud-type {
+  clip-path: inset(0 100% 0 0);
+  animation: hud-type 0.45s steps(18, end) both;
+}
+@keyframes hud-type { to { clip-path: inset(0 0 0 0); } }
+.hud-blink { animation: hud-blink 0.9s steps(2, start) infinite; }
+@keyframes hud-blink { to { visibility: hidden; } }
+
+.hud-in { animation: hud-in 1.1s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes hud-in { 0% { opacity: 0; transform: scale(0.55) rotate(-25deg); filter: blur(10px); } 100% { opacity: 1; transform: none; filter: blur(0); } }
+.hud-r1 { animation: hud-spin 48s linear infinite; }
+.hud-r2 { animation: hud-spin 16s linear infinite reverse; }
+.hud-r3 { animation: hud-spin 5.5s cubic-bezier(0.6, 0.1, 0.4, 0.9) infinite; }
+.hud-r4 { animation: hud-spin 22s linear infinite; }
+@keyframes hud-spin { to { transform: rotate(360deg); } }
+.hud-draw { animation: hud-draw 1.4s cubic-bezier(0.65, 0, 0.35, 1) 0.3s both; }
+@keyframes hud-draw { to { stroke-dashoffset: 0; } }
+.hud-node { opacity: 0; animation: hud-node 1.8s ease-in-out infinite; }
+@keyframes hud-node { 0%, 100% { opacity: 0.15; } 50% { opacity: 1; } }
+.hud-sweep {
+  background: conic-gradient(from 0deg, rgba(228, 0, 43, 0.38), rgba(228, 0, 43, 0) 70deg, transparent 360deg);
+  mask-image: radial-gradient(circle, black 55%, transparent 71%);
+  -webkit-mask-image: radial-gradient(circle, black 55%, transparent 71%);
+  animation: hud-spin 2.4s linear infinite, hud-fade-in 1s ease 0.4s both;
+}
+.hud-shock {
+  border: 2px solid rgba(255, 51, 85, 0.9);
+  opacity: 0;
+  animation: hud-shock 1.1s cubic-bezier(0.2, 0.7, 0.3, 1) 1.58s both;
+}
+@keyframes hud-shock { 0% { opacity: 0.95; transform: scale(0.4); } 100% { opacity: 0; transform: scale(2.6); } }
+.hud-letter {
+  opacity: 0;
+  animation: hud-letter 0.7s steps(1, end) both, hud-glow 2.4s ease-in-out 2.4s infinite;
+}
+@keyframes hud-letter {
+  0% { opacity: 0; transform: translateY(4px); text-shadow: -3px 0 rgba(0, 255, 255, 0.7), 3px 0 rgba(255, 0, 80, 0.7); }
+  15% { opacity: 1; }
+  25% { opacity: 0.2; transform: translateX(-2px); }
+  40% { opacity: 1; transform: translateX(2px); text-shadow: -2px 0 rgba(0, 255, 255, 0.5), 2px 0 rgba(255, 0, 80, 0.5); }
+  55% { opacity: 0.4; }
+  70% { opacity: 1; transform: none; text-shadow: 0 0 18px rgba(228, 0, 43, 0.6); }
+  100% { opacity: 1; transform: none; text-shadow: 0 0 18px rgba(228, 0, 43, 0.6); }
+}
+@keyframes hud-glow { 0%, 100% { text-shadow: 0 0 14px rgba(228, 0, 43, 0.45); } 50% { text-shadow: 0 0 28px rgba(255, 51, 85, 0.85); } }
+.hud-exit { animation: hud-exit 0.75s cubic-bezier(0.5, 0, 0.75, 0) both; }
+@keyframes hud-exit { 0% { opacity: 1; transform: none; filter: blur(0); } 100% { opacity: 0; transform: scale(1.35); filter: blur(10px); } }
+.hud-flash { background: radial-gradient(circle, rgba(255, 255, 255, 0.55), rgba(228, 0, 43, 0.2) 40%, transparent 70%); animation: hud-flash 0.5s ease-out both; }
+@keyframes hud-flash { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
+.hud-shock-step {
+  border: 2px solid rgba(255, 51, 85, 0.85);
+  opacity: 0;
+  animation: hud-shock 0.9s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+.hud-swap { animation: hud-swap 0.55s steps(1, end) both; }
+@keyframes hud-swap {
+  0% { opacity: 0; transform: translateY(6px); text-shadow: -3px 0 rgba(0, 255, 255, 0.6), 3px 0 rgba(255, 0, 80, 0.6); }
+  20% { opacity: 1; }
+  35% { opacity: 0.3; transform: translateX(-2px); }
+  55% { opacity: 1; transform: translateX(1px); text-shadow: -1px 0 rgba(0, 255, 255, 0.4), 1px 0 rgba(255, 0, 80, 0.4); }
+  100% { opacity: 1; transform: none; text-shadow: none; }
+}
+/* Data chips pan slowly when they overflow the row. */
+.build-marquee { animation: build-marquee 9s ease-in-out 1.2s infinite alternate; }
+@keyframes build-marquee { 0%, 15% { transform: translateX(0); } 85%, 100% { transform: translateX(min(0px, calc(-100% + min(28rem, 100vw - 2.5rem)))); } }

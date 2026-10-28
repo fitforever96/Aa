@@ -28,6 +28,9 @@ const STEPS: { key: QuickStep; label: string; ai?: boolean }[] = [
   { key: "check", label: "Running quality checks" },
 ];
 
+/** Minimum time each build step stays on screen. */
+const STEP_MS = 1300;
+
 const TONE: Record<Basis, "ok" | "info" | "warn"> = { stated: "ok", found_online: "info", estimate: "warn" };
 
 export default function QuickBuild() {
@@ -50,6 +53,7 @@ export default function QuickBuild() {
 
   const [chips, setChips] = useState<BuildChip[] | null>(null);
   const [pending, setPending] = useState<QuickResult | null>(null);
+  const [log, setLog] = useState<Record<string, string[]>>({});
   useEffect(() => prepareBuildSounds(), []);
 
   const build = async () => {
@@ -59,12 +63,13 @@ export default function QuickBuild() {
     setResult(null);
     setPending(null);
     setChips(briefChips(text));
+    setLog(buildLog(text, useAI, length));
     // Each step stays on screen long enough to read, even when the build itself is instant.
     let chain = Promise.resolve();
     let last = 0;
     const paced = (st: QuickStep) => {
       chain = chain.then(async () => {
-        const wait = Math.max(0, 650 - (performance.now() - last));
+        const wait = Math.max(0, STEP_MS - (performance.now() - last));
         if (last) await new Promise((r) => setTimeout(r, wait));
         last = performance.now();
         setStep(st);
@@ -73,7 +78,7 @@ export default function QuickBuild() {
     try {
       const r = await quickBuild(text, useAI, paced, length);
       await chain;
-      await new Promise((res) => setTimeout(res, Math.max(0, 650 - (performance.now() - last))));
+      await new Promise((res) => setTimeout(res, Math.max(0, STEP_MS - (performance.now() - last))));
       setPending(r);
       playBuildDone();
     } catch (e) {
@@ -96,7 +101,7 @@ export default function QuickBuild() {
 
   return (
     <>
-      {chips && <BuildSequence mode={useAI ? "ai" : "offline"} steps={steps} current={step} done={!!pending} chips={chips} onFinished={finish} />}
+      {chips && <BuildSequence mode={useAI ? "ai" : "offline"} steps={steps} current={step} done={!!pending} chips={chips} log={log} onFinished={finish} />}
       <PageHeader title="Build a Proposal" eyebrow="Quick build" back="/" />
       <Page>
         <Card>
@@ -276,4 +281,18 @@ function briefChips(text: string): BuildChip[] {
   if (b.priceCents != null) out.push({ icon: <DollarSign size={13} />, text: `${formatMoney(b.priceCents)}${b.priceBasis === "per_month" ? " / month" : b.priceBasis === "one_time" ? " one time" : " / visit"}` });
   if (b.frequencyBasis === "stated") out.push({ icon: <CalendarClock size={13} />, text: frequencyLabel(b.frequency) });
   return out;
+}
+
+/** Engine log lines shown during the build, from what was read in the note. */
+function buildLog(text: string, useAI: boolean, length: DocLength): Record<string, string[]> {
+  const b = parseBrief(text);
+  const up = (x: string) => x.toUpperCase();
+  const addr = b.address ? up([b.address.line1, b.address.city].filter(Boolean).join(", ")) : "NOT STATED";
+  return {
+    read: [`PARSE › ${text.trim().length} CHARS · ${text.trim().split(/\s+/).length} TOKENS`, `ADDR  › ${addr}`, `PEST  › ${up(b.services.map((x) => SERVICE_LABELS[x]).join(" + "))}`, `PRICE › ${b.priceCents != null ? `${formatMoney(b.priceCents)} ${b.priceBasis === "per_month" ? "/ MONTH" : "/ VISIT"} · LOCKED` : "CALCULATE @ LABOR RATE"}`],
+    lookup: ["GEO   › QUERYING PUBLIC RECORDS", "WEB   › ORKIN · EPA · EXTENSION SOURCES", "SITE  › CLASSIFYING FACILITY TYPE"],
+    plan: [`MODEL › ${up(b.propertyType)}`, `FREQ  › ${up(frequencyLabel(b.frequency))}`, "LAYOUT› SIZING INTERIOR + PERIMETER DEVICES", "PRICE › INTEGER-CENT ENGINE · NO HIDDEN ROUNDING"],
+    write: ["CLAUDE› COMPOSING SITE-SPECIFIC NARRATIVE", "GUARD › PRICES BY KEY ONLY · TERMS VERBATIM"],
+    check: [`QC    › LEGAL · FINANCIAL · DOCUMENT`, `PDF   › PORTRAIT · ${length === "one_page" ? "1 PAGE" : length === "two_page" ? "2 PAGES" : length === "short" ? "SHORT" : "FULL"}`, useAI ? "LINK  › CLAUDE SESSION CLOSED" : "MODE  › OFFLINE ENGINE"],
+  };
 }
