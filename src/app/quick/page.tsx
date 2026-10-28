@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowRight, Check, FileText, PencilLine, Sparkles } from "lucide-react";
@@ -59,11 +59,16 @@ export default function QuickBuild() {
           <div className="mb-2 text-[15px] font-semibold">Tell me the basics</div>
           <p className="mb-3 text-[13.5px] leading-relaxed text-ink2">Just the address, the pest problem and your price. Say it or type it. I’ll fill in the rest and write the whole proposal.</p>
           <VoiceInput value={text} onChange={setText} rows={4} placeholder="e.g. Riverside Foods, 1234 Woodward Ave, Detroit MI. Mice in the back room and around the loading dock. $350 a visit." />
-          <button className="btn-primary mt-3 w-full !py-3.5 text-[16px]" disabled={text.trim().length < 6 || !!step} onClick={build}>
+          <button className="btn-primary cta-sheen mt-3 w-full !py-3.5 text-[16px]" disabled={text.trim().length < 6 || !!step} onClick={build}>
             {step ? <Spinner /> : <Sparkles size={18} />} {step ? "Building…" : "Build my proposal"}
           </button>
           {step && (
-            <ol className="mt-4 space-y-2">
+            <div className="mt-4 h-1 overflow-hidden rounded-full bg-surface2">
+              <div className="progress-shimmer h-full rounded-full transition-[width] duration-700 ease-out" style={{ width: `${Math.max(12, ((at + 1) / steps.length) * 100)}%` }} />
+            </div>
+          )}
+          {step && (
+            <ol className="stagger mt-4 space-y-2">
               {steps.map((s, i) => (
                 <li key={s.key} className={`flex items-center gap-2.5 text-[14px] ${i > at ? "text-ink3" : ""}`}>
                   <span className="flex h-5 w-5 items-center justify-center">{i < at ? <Check size={16} className="text-ok" /> : i === at ? <Spinner size={14} /> : <span className="h-1.5 w-1.5 rounded-full bg-ink3/50" />}</span>
@@ -106,12 +111,14 @@ export default function QuickBuild() {
 function Done({ r, onOpen, onAgain }: { r: QuickResult; onOpen: (step: number) => void; onAgain: () => void }) {
   const price = priceProposal(r.proposal)[0];
   const point = price?.recurring ?? price?.initial;
+  const shownPrice = useCountUp(point?.finalCents ?? 0);
   const rows = planRows(r.plan);
   const checks = [...r.plan.fieldVerification, ...r.issues.map((c) => `${c.label}: ${c.detail}`)];
   return (
     <>
       <PageHeader title="Proposal Ready" eyebrow="Quick build" back="/" />
       <Page>
+        <SuccessMark />
         <Card className="animate-rise">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -122,7 +129,7 @@ function Done({ r, onOpen, onAgain }: { r: QuickResult; onOpen: (step: number) =
           </div>
           {point && (
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="num font-display text-[34px] font-bold leading-none">{formatMoney(point.finalCents)}</span>
+              <span className="num font-display text-[34px] font-bold leading-none">{formatMoney(shownPrice)}</span>
               <span className="text-[13px] text-ink3">{r.proposal.programs[0].chargeType === "one_time" ? "one time" : `per visit · ${frequencyLabel(r.proposal.programs[0].frequency).toLowerCase()}`}</span>
             </div>
           )}
@@ -144,7 +151,7 @@ function Done({ r, onOpen, onAgain }: { r: QuickResult; onOpen: (step: number) =
         ))}
 
         <SectionTitle>What I filled in</SectionTitle>
-        <div className="card divide-hair overflow-hidden">
+        <div className="stagger card divide-hair overflow-hidden">
           {rows.map((row) => (
             <div key={row.label} className="flex items-start justify-between gap-3 px-4 py-3 text-[14px]">
               <span className="shrink-0 text-ink3">{row.label}</span>
@@ -174,7 +181,7 @@ function Done({ r, onOpen, onAgain }: { r: QuickResult; onOpen: (step: number) =
           <>
             <SectionTitle>Check before you send</SectionTitle>
             <Card>
-              <ul className="space-y-2 text-[14px] leading-relaxed">
+              <ul className="stagger space-y-2 text-[14px] leading-relaxed">
                 {checks.map((x) => (
                   <li key={x} className="flex gap-2">
                     <AlertTriangle size={16} className="mt-0.5 shrink-0 text-warn" />
@@ -192,4 +199,39 @@ function Done({ r, onOpen, onAgain }: { r: QuickResult; onOpen: (step: number) =
       </Page>
     </>
   );
+}
+
+/** Animated check that draws itself when the proposal is ready. */
+function SuccessMark() {
+  return (
+    <div className="mb-4 flex flex-col items-center pt-2">
+      <div className="relative flex h-16 w-16 items-center justify-center">
+        <span className="check-pulse absolute inset-0 rounded-full bg-ok/30" />
+        <svg viewBox="0 0 64 64" className="check-ring relative h-16 w-16">
+          <circle cx="32" cy="32" r="30" className="fill-ok" />
+          <path d="M20 33 l8 8 l16 -18" fill="none" stroke="white" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" className="check-path" />
+        </svg>
+      </div>
+      <div className="mt-2 animate-rise text-[13px] font-semibold uppercase tracking-[0.2em] text-ok">Ready to send</div>
+    </div>
+  );
+}
+
+/** Counts up to a cents value once, for the price reveal. */
+function useCountUp(target: number, ms = 900): number {
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return setV(target);
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (now: number) => {
+      const k = Math.min(1, (now - t0) / ms);
+      const eased = 1 - Math.pow(1 - k, 3);
+      setV(k < 1 ? Math.round(target * eased) : target);
+      if (k < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, ms]);
+  return v;
 }

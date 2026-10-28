@@ -60,7 +60,7 @@ export default function Dashboard() {
           </h1>
         </div>
 
-        <Link href="/quick" className="group mt-5 flex w-full items-center gap-4 overflow-hidden rounded-3xl bg-red p-5 text-left text-white shadow-xl shadow-red/20 transition active:scale-[0.99]">
+        <Link href="/quick" className="cta-sheen group mt-5 flex w-full items-center gap-4 overflow-hidden rounded-3xl bg-red p-5 text-left text-white shadow-xl shadow-red/20 transition active:scale-[0.99]">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15">
             <Sparkles size={26} strokeWidth={2.2} />
           </span>
@@ -71,16 +71,16 @@ export default function Dashboard() {
           <ArrowRight className="shrink-0 transition group-hover:translate-x-1" />
         </Link>
 
-        <div className="mt-3 grid grid-cols-3 gap-2.5">
-          <button onClick={() => start()} className="card flex flex-col items-start gap-2 p-3.5 text-left transition active:scale-[0.98]">
+        <div className="stagger mt-3 grid grid-cols-3 gap-2.5">
+          <button onClick={() => start()} className="card press flex flex-col items-start gap-2 p-3.5 text-left">
             <Plus size={20} className="text-red" />
             <span className="text-[13px] font-semibold leading-tight">Step by step</span>
           </button>
-          <Link href="/estimates" className="card flex flex-col items-start gap-2 p-3.5 transition active:scale-[0.98]">
+          <Link href="/estimates" className="card press flex flex-col items-start gap-2 p-3.5">
             <Calculator size={20} className="text-red" />
             <span className="text-[13px] font-semibold leading-tight">Quick estimate</span>
           </Link>
-          <Link href="/import" className="card flex flex-col items-start gap-2 p-3.5 transition active:scale-[0.98]">
+          <Link href="/import" className="card press flex flex-col items-start gap-2 p-3.5">
             <FileUp size={20} className="text-red" />
             <span className="text-[13px] font-semibold leading-tight">Import proposal</span>
           </Link>
@@ -92,7 +92,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        <div className="mt-6 grid grid-cols-3 gap-2.5">
+        <div className="stagger mt-6 grid grid-cols-3 gap-2.5">
           {[
             ["Drafts", counts.draft],
             ["Awaiting approval", counts.awaiting],
@@ -107,7 +107,7 @@ export default function Dashboard() {
 
         <SectionTitle action={<Link href="/library" className="text-[13px] font-medium text-red">All proposals</Link>}>Recently edited</SectionTitle>
         {proposals && proposals.length === 0 && <EmptyState icon={<Sparkles size={28} />} title="No proposals yet" body="Create your first proposal, dictate a job, or import a completed proposal to reuse its pricing and structure." />}
-        <div className="card divide-hair overflow-hidden">
+        <div className="stagger card divide-hair overflow-hidden">
           {(proposals ?? []).slice(0, 6).map((p) => {
             const r = priceProposal(p)[0];
             const price = r?.recurring?.finalCents ?? r?.initial.finalCents;

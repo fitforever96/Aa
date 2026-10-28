@@ -11,6 +11,7 @@ import { useToast } from "@/components/shell/Toast";
 import { formatMoney } from "@/lib/engine/money";
 import { UnlockPrivateData } from "@/components/UnlockPrivateData";
 import { ClaudeKeySetup } from "@/components/ClaudeKeySetup";
+import { IntroSoundToggle } from "@/components/IntroSoundToggle";
 import type { Settings } from "@/lib/types";
 
 export default function SettingsPage() {
@@ -86,6 +87,7 @@ export default function SettingsPage() {
         <SectionTitle>Appearance</SectionTitle>
         <Card>
           <Segmented value={s.theme} onChange={(v) => save((x) => void (x.theme = v))} options={[{ value: "dark", label: "Dark" }, { value: "light", label: "Light" }]} />
+          <IntroSoundToggle />
         </Card>
 
         <SectionTitle>Pricing & time standards</SectionTitle>

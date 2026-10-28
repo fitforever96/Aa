@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import clsx from "clsx";
 import { Check, ChevronLeft, ChevronRight, Cloud, CloudOff, Sparkles } from "lucide-react";
@@ -29,6 +29,7 @@ export function Workspace() {
   const [step, setStep] = useState(() => Number(params.get("step") ?? -1));
   const [programIdx, setProgramIdx] = useState(0);
   const [assistant, setAssistant] = useState(false);
+  const dir = useRef<"next" | "prev">("next");
 
   useEffect(() => {
     if (proposal && step < 0) setStep(proposal.wizardStep ?? 0);
@@ -36,6 +37,7 @@ export function Workspace() {
 
   const goStep = (n: number) => {
     const s = Math.max(0, Math.min(STEPS.length - 1, n));
+    dir.current = s < step ? "prev" : "next";
     setStep(s);
     update((d) => void (d.wizardStep = s));
     const u = new URL(window.location.href);
@@ -97,7 +99,7 @@ export function Workspace() {
       </PageHeader>
       <Page className={showEstimate ? "!pb-56 lg:!pb-16" : ""}>
         <div className={clsx(showEstimate && "lg:grid lg:grid-cols-[1fr_320px] lg:gap-6")}>
-          <div key={step} className="min-w-0 animate-rise">
+          <div key={step} className={clsx("min-w-0", dir.current === "prev" ? "step-prev" : "step-next")}>
             <View {...props} />
             <div className="mt-8 flex justify-between gap-3">
               <button className="btn-secondary" disabled={step === 0} onClick={() => goStep(step - 1)}>
