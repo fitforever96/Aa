@@ -10,9 +10,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ───────── Design tokens (single source of truth) ───────── */
-:root,
-[data-theme="dark"] {
+/* ───────── Design tokens (single source of truth). The app is dark mode only. ───────── */
+:root {
   --bg: 10 10 12;
   --surface: 20 20 23;
   --surface-2: 28 28 32;
@@ -32,26 +31,7 @@
   --shadow: 0 1px 0 rgb(255 255 255 / 0.04) inset;
   color-scheme: dark;
 }
-[data-theme="light"] {
-  --bg: 244 244 246;
-  --surface: 255 255 255;
-  --surface-2: 246 246 248;
-  --surface-3: 234 234 238;
-  --line: 0 0 0;
-  --ink: 17 17 20;
-  --ink-2: 84 84 92;
-  --ink-3: 130 130 138;
-  --red: 216 0 40;
-  --red-press: 186 0 34;
-  --red-soft: 216 0 40;
-  --ok: 22 150 60;
-  --warn: 190 120 0;
-  --info: 20 100 220;
-  --line-alpha: 0.08;
-  --line-strong: 0.14;
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.04);
-  color-scheme: light;
-}
+
 
 html {
   -webkit-text-size-adjust: 100%;

@@ -18,20 +18,14 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#0A0A0C" },
-    { media: "(prefers-color-scheme: light)", color: "#F4F4F6" },
-  ],
+  // Dark mode only.
+  themeColor: "#0A0A0C",
+  colorScheme: "dark",
 };
-
-const themeInit = `try{var t=localStorage.getItem('ops-theme')||'dark';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='dark'}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-theme="dark" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
-      </head>
+    <html lang="en" className="dark" style={{ colorScheme: "dark" }} suppressHydrationWarning>
       <body>
         <AppShell>{children}</AppShell>
       </body>

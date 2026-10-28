@@ -6,7 +6,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { ChevronRight, Download, Plus, Trash2, Upload } from "lucide-react";
 import { db, exportBackup, importBackup } from "@/lib/db";
 import { downloadBlob, useAIStatus, useSettings } from "@/lib/client";
-import { Badge, Callout, Card, Page, PageHeader, SectionTitle, Segmented, Select, Spinner, TextField, Toggle, NumberField } from "@/components/ui";
+import { Badge, Callout, Card, Page, PageHeader, SectionTitle, Select, Spinner, TextField, Toggle, NumberField } from "@/components/ui";
 import { useToast } from "@/components/shell/Toast";
 import { formatMoney } from "@/lib/engine/money";
 import { UnlockPrivateData } from "@/components/UnlockPrivateData";
@@ -84,9 +84,8 @@ export default function SettingsPage() {
           <p className="text-[12px] text-ink3 sm:col-span-2">The ORKIN text wordmark is used throughout. The circular Orkin logo is not included unless you provide and authorize it.</p>
         </Card>
 
-        <SectionTitle>Appearance</SectionTitle>
+        <SectionTitle>Sound</SectionTitle>
         <Card>
-          <Segmented value={s.theme} onChange={(v) => save((x) => void (x.theme = v))} options={[{ value: "dark", label: "Dark" }, { value: "light", label: "Light" }]} />
           <IntroSoundToggle />
         </Card>
 

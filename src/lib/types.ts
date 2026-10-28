@@ -674,7 +674,8 @@ export interface Settings {
     branch: string;
     coAuthors: { name: string; title: string; phone: string; email: string }[];
   };
-  theme: "dark" | "light";
+  /** The app is dark mode only; kept for backup compatibility. */
+  theme: "dark";
   currency: "USD";
   defaults: {
     coverStyle: CoverStyle;

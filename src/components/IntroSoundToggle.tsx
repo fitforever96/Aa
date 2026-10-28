@@ -17,7 +17,7 @@ export function IntroSoundToggle() {
     void prepareUiSounds();
   }, []);
   return (
-    <div className="mt-3 space-y-2">
+    <div className="space-y-2">
       <Toggle
         checked={intro}
         onChange={(v) => {

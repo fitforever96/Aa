@@ -81,14 +81,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [path]);
   const onIntroExit = useCallback(() => setEntered(true), []);
 
+  // Dark mode only: clear the light-theme preference older versions may have stored.
   useEffect(() => {
-    if (settings?.theme) {
-      document.documentElement.dataset.theme = settings.theme;
-      try {
-        localStorage.setItem("ops-theme", settings.theme);
-      } catch {}
-    }
-  }, [settings?.theme]);
+    try {
+      localStorage.removeItem("ops-theme");
+    } catch {}
+  }, []);
 
   useEffect(() => {
     if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {

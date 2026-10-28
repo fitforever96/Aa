@@ -23,7 +23,7 @@ A mobile-first progressive web app (PWA) for commercial pest-management proposal
 | **Knowledge** | Document library with local BM25 retrieval. Extracted facts keep their source and status until you promote them. |
 | **Calibration** | Record actual service time. Estimated vs. actual median ratio and MAPE (mean absolute percentage error), grouped by property type, size, frequency, technicians, access, equipment count and pest. Approved factors apply only to app-estimated components. |
 | **Data** | IndexedDB (Dexie): proposals, versions, customers, equipment, historical, capabilities, knowledge, assets, assumption versions, settings. Autosave, version history with restore, JSON backup and restore. |
-| **PWA** | Manifest, icons, Home Screen standalone mode, safe areas, splash, offline app shell via service worker. Dark (default) and light themes, driven by central design tokens. |
+| **PWA** | Manifest, icons, Home Screen standalone mode, safe areas, splash, offline app shell via service worker. Dark mode only, driven by central design tokens; there is no light interface. |
 
 ### What needs configuration or verification
 - **AI writing, research, OCR, AI extraction and AI command interpretation** run on Claude. On the GitHub Pages install, paste your own Claude API key once in Settings › AI & Research: the phone then calls Anthropic directly. The key stays in this device's local database, is never in the code and is excluded from backups, so set a monthly spend limit in the Anthropic console. On a server deployment, set `ANTHROPIC_API_KEY` instead. The app never claims research happened when it didn't. AI requests are tested against a simulated Claude API, not the live one.
